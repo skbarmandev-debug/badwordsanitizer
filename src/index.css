@@ -1,0 +1,72 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Custom Code Editor Color Palette */
+  --color-editor-dark-base: #0d1117;
+  --color-editor-dark-panel: #161b22;
+  --color-editor-dark-bg: #0a0e14;
+  --color-editor-dark-border: #30363d;
+  --color-editor-dark-text: #c9d1d9;
+  --color-editor-dark-muted: #8b949e;
+  
+  --color-editor-light-base: #ffffff;
+  --color-editor-light-panel: #f6f8fa;
+  --color-editor-light-bg: #fbfbfb;
+  --color-editor-light-border: #d0d7de;
+  --color-editor-light-text: #24292f;
+  --color-editor-light-muted: #57606a;
+
+  --color-editor-accent: #58a6ff;
+  --color-editor-warning: #f0883e;
+  --color-editor-success: #3fb950;
+  --color-editor-error: #f85149;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.animate-cursor-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Custom scrollbar styling to fit the developer tool vibe */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: #30363d;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+/* Gutter alignment and styling */
+.editor-gutter-num {
+  font-family: var(--font-mono);
+  color: #484f58;
+  text-align: right;
+  user-select: none;
+}
+.dark .editor-gutter-num {
+  color: #484f58;
+}
+.light .editor-gutter-num {
+  color: #8c959f;
+}
+

@@ -1,0 +1,6 @@
+{
+  "name": "SafeText Editor",
+  "description": "Formates and sanitizes Fiverr messages for freelancers, detecting restricted words and offering grammar proofreading.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
