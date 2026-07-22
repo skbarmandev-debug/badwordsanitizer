@@ -36,8 +36,8 @@ async function startServer() {
         return res.status(500).json({ error: "Gemini API Key is not configured on the server." });
       }
 
-      // Model choice: "accurate" (gemini-2.5-pro) or "fast" (gemini-2.5-flash)
-      const selectedModel = mode === "accurate" ? "gemini-2.5-pro" : "gemini-2.5-flash";
+      // Model choice: upgraded to gemini-3.5-flash for both modes to ensure robust, ultra-fast responses without requiring paid keys
+      const selectedModel = "gemini-3.5-flash";
 
       const systemInstruction = `You are a professional, extremely precise grammar and spell checking tool built for developers.
 Analyze the user's text for grammar, spelling, and punctuation issues.

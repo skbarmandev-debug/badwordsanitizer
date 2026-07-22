@@ -23,7 +23,17 @@ import {
   ChevronDown,
   Folder,
   FolderOpen,
-  Edit
+  Edit,
+  Clock,
+  Terminal,
+  Command,
+  GitBranch,
+  Cpu,
+  Search,
+  Code,
+  Zap,
+  CheckCircle2,
+  HardDrive
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -37,14 +47,14 @@ const DEFAULT_RESTRICTED_WORDS = [
   "pay", "payment", "paypal", "payoneer", "wise", "stripe", "cashapp",
   "bank", "bank account", "bank transfer", "western union",
   "crypto", "bitcoin", "usdt", "binance", "direct pay", "pay outside", "invoice",
-  "5 star", "five star", "review", "good review", "positive review", "feedback", "good feedback",
+  "5 star", "five star", "review", "good review", "positive review",
   "rating", "rate my work", "leave a review",
-  "homework", "assignment", "thesis", "dissertation", "exam", "quiz", "test",
+  "homework", "assignment", "thesis", "dissertation", "exam", "quiz",
   "university", "college", "school project", "student",
   "hack", "hacking", "cracking", "password cracking",
   "spam", "bot", "malware", "virus", "fake", "fake followers", "fake reviews", "fake likes",
   "phishing", "deepfake", "scam",
-  "contact", "cancel the order", "scammer", "free", "work", "cancellation", "tip me", "report you", "buy", "fiverr", "account", "sell account", "exchange"
+  "contact", "cancel the order", "scammer", "cancellation", "tip me", "report you", "buy", "account", "sell account", "exchange"
 ];
 
 // ==========================================
@@ -62,43 +72,49 @@ const DEFAULT_TEMPLATES: Template[] = [
     id: "default-first-update",
     name: "Default",
     category: "First Update",
-    content: "[PLACEHOLDER: Write your First Update message here. Replace this text with your real template.]"
+    content: "Hi there,\n\nI hope you’re doing well.\n\nIt's a first draft update for your website-\n\nAs per your instructions, I've designed a fully functional Wix website based on your requirements. Here's an overview of it :\n\n01. I’ve made the website fully responsive across all devices for a seamless user experience.\n\n02. I’ve designed the site to be minimal, clean, and professional, based on your instructions.\n\n03. I’ve designed the new pages aligned with your vision.\n\n04. I've designed the entire website using the information from your existing website.\n\n05. I've designed the following pages:\n\n>> Home\n>> About\n>> SERVICE\n>> CONTACT\n\nHere is the Website test URL :\n[Client Website URL]\n\nNote: I've used some placeholder images on the website. Once you provide all the images, I will replace them.\n\nPlease feel free to r-e-v-i-e-w everything and share your thoughts. This is the first draft, so I encourage you to check everything on your end and see how it aligns with your vision.\n\nIf everything looks good, that’s great, but if you notice anything you’d like to adjust or improve, I’ll be more than happy to refine those areas. I’m here to ensure the final result fully meets your expectations and resonates well with your audience.\n\nLooking forward to hearing from you.\n\nBest Regards,"
   },
   {
     id: "default-follow-up-first",
     name: "Default",
-    category: "Follow-up After First Update",
-    content: "[PLACEHOLDER: Write your Follow-up After First Update message here. Replace this text with your real template.]"
+    category: "Second Follow-up",
+    content: "Hi there,\n\nI hope you're doing well!\n\nI just wanted to follow up and see if you've had a chance to r-e-v-i-e-w the first draft of the website. I completely understand that you may be busy, so please feel free to take your time.\n\nWhenever you have a chance, I'd really appreciate your feedback. If there are any changes, design suggestions, or font preferences you'd like me to incorporate, please don't hesitate to share them with me.\n\nI'll be happy to make the requested revisions and provide you with an updated version as quickly as possible.\n\nLooking forward to hearing your thoughts!\n\nBest regards,"
   },
   {
     id: "default-follow-up-mod",
     name: "Default",
     category: "Follow-up After Modification",
-    content: "[PLACEHOLDER: Write your Follow-up After Modification message here. Replace this text with your real template.]"
+    content: "Hi there,\n\nI hope you're doing well!\n\nI just wanted to check in. Have you had a chance to r-e-v-i-e-w the full site? Once you do, please let me know if there are any modifications or changes you'd like to make. I'll work on them promptly and send you an updated and improved version.\n\nLooking forward to hearing from you!\n\nBest regards,"
   },
   {
     id: "default-delivery",
     name: "Default",
     category: "Delivery Message",
-    content: "[PLACEHOLDER: Write your Delivery Message here. Replace this text with your real template.]"
+    content: "Hi there,\n\nI hope you’re doing well.\n\nAs per your instructions, I've developed a fully functional Wix website based on your requirements. Here's an overview of it :\n\n01. I’ve made the website fully responsive across all devices for a seamless user experience.\n\n02. I’ve designed the site to be minimal, clean, and professional, based on your instructions.\n\n03. I’ve designed the new pages aligned with your vision.\n\n04. I've designed the entire website using the information from your existing website.\n\n05. I've updated the navigation font, changed the quote, renamed the title, removed the numbering from the Things I Care About section, updated the e-m-a-i-l address, added the FPPC footer to every page, and fixed the Contribute button link on the homepage.\n\n06. I've removed the Europe-style image, fixed the font color, and added your new introduction at the top of the about page.\n\n07. I've removed the \"Track Record\" section and the \"Delivering Results & Leading Initiatives for Novato\" section on the Accomplishments Page.\n\n08. I've removed the \"The Door Is Open\" section, updated the c-o-n-t-a-c-t information, and fixed the fonts on the C-o-n-t-a-c-t Page.\n\n09. I've designed the following pages:\n>> Home\n>> About\n>> ISSUES\n>> ENDORSEMENTS\n>> GET INVOLVED\n>> CONTRIBUTE\n>> C-O-N-T-A-C-T\n\nHere is the Website test URL :\nhttps://rfarac.wixsite.com/rachelfarac\n\nPlease Note: For your security, please communicate with us only through Fiverr. If you receive messages, e-m-a-i-ls, or c-o-n-t-a-c-t requests from anyone claiming to represent our team on any other platform, please do not respond. We do not initiate project-related communication outside of Fiverr.\n\nAny communication with individuals or entities outside Fiverr is at your own discretion, and we cannot accept responsibility for any consequences that may arise from such interactions.\n\nSince I have completed all of the tasks on my end, I am delivering this project to you.\n\nNo worries about this project's delivery. After you approve this project based on my work, I'll provide 60 days of ongoing support. During this support period, if you need any changes or modifications, you can let me know in my \"Fiverr Inbox.\" I will take care of the rest.\n\nIt's a pleasure to work with you, and I hope we'll work together in the future.\n\nBest regards,"
   },
   {
     id: "default-delivery-extend",
     name: "Default",
     category: "Delivery Time Extend Message",
-    content: "[PLACEHOLDER: Write your Delivery Time Extend Message here. Replace this text with your real template.]"
+    content: "Based on your requirements, I've made the website and shared the first draft update with you. I'm now waiting for your valuable feedback. Since the delivery time is about to end, I've sent a delivery time extension request. Please accept the extension request so I can continue working on any revisions and complete the project properly based on your feedback.\n\nThank you."
+  },
+  {
+    id: "default-delivery-approach",
+    name: "Default",
+    category: "Delivery approach",
+    content: "Hi there,\n\nI hope you are doing great.\n\nAs per your instructions, I've completed the following task:\n\n01. I've ........................\n\n02. I've ................................\n\n03. I've ........................\n\n04. I've ................................\n\nHere is your updated website URL:\n[Paste Your client website URL]\n\nSince I've completed all the assigned tasks from my end, can I deliver the work to you?\n\nNo worries about the transition, you will receive 30 days of ongoing support from me starting today. If you notice any minor tweaks needed or have questions about the new page, just message me here in the Fiverr Inbox, and I will take care of it immediately.\n\nThank you for the continued trust in my work. I look forward to your thoughts!\n\nBest regards,"
   },
   {
     id: "default-inbox",
     name: "Default",
     category: "Inbox Message",
-    content: "[PLACEHOLDER: Write your Inbox Message here. Replace this text with your real template.]"
+    content: "Hi there,\n\nI hope you are having a great day.\n\nAs per your instructions, I have completed the following tasks:\n\n01. I've ...........................\n\n02. I've ...........................\n\n03. I've ...........................\n\n04. I've ...........................\n\n05. I've ...........................\n\nHere is your updated website URL:\n[Place Your client website URL]\n\nNote: If there is any note\n\nSince I have completed all of the tasks on my end, I am delivering this project to you.\n\nNo worries about this project's delivery. After you approve this project based on my work, I'll provide 60 days of ongoing support. During this support period, if you need any changes or modifications, you can let me know in my \"Fiverr Inbox.\" I will take care of the rest.\n\nIt's a pleasure to work with you, and I hope we'll work together in the future.\n\nBest regards,"
   },
   {
     id: "default-inbox-no-mod",
     name: "Default",
     category: "Inbox Message Without Modification",
-    content: "[PLACEHOLDER: Write your Inbox Message Without Modification here. Replace this text with your real template.]"
+    content: "Hi there,\n\nI hope you are doing great.\n\nBased on your latest feedback, I've completed all the assigned tasks according to your instructions. I've maintained a consistent layout throughout the website and ensured everything aligns with your vision.\n\nHere is your website URL:\n[Place your Client website URL]\n\nSince I have completed all of the tasks on my end, I am delivering this project to you.\n\nNo worries about this project's delivery. After approving this project delivery based on my work, I'll give you 30 days of ongoing support. In this support period, if you need any changes or modifications, you can let me know in my \"Fiverr Inbox.\" I will take care of the rest.\n\nIt's a pleasure to work with you, and I hope we'll work together in the future.\n\nBest regards,"
   }
 ];
 
@@ -353,13 +369,25 @@ function setCaretPosition(element: HTMLElement, offset: number) {
 // APP COMPONENT
 // ==========================================
 export default function App() {
-  // Theme state
+  // Theme state (night mode by default)
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     const saved = localStorage.getItem("safetext_theme");
     if (saved === "light" || saved === "dark") return saved;
-    if (window.matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
-    return "light";
+    return "dark";
   });
+
+  // Dynamic ticking clock for the header title bar
+  const [currentTime, setCurrentTime] = useState<string>("");
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date();
+      setCurrentTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Main text state
   const [text, setText] = useState<string>("");
@@ -368,19 +396,32 @@ export default function App() {
   
   // Restricted words state
   const [restrictedWords, setRestrictedWords] = useState<string[]>(() => {
+    const filterOut = (words: string[]) => words.filter(w => {
+      const lower = w.toLowerCase().trim();
+      return lower !== "website" && lower !== "free" && lower !== "test" && lower !== "work" && lower !== "fiverr" && lower !== "feedback" && lower !== "good feedback" && lower !== "eedback";
+    });
+
     const saved = localStorage.getItem("safetext_restricted_words");
+    const filteredDefaults = filterOut(DEFAULT_RESTRICTED_WORDS);
+
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          // Merge with default list so new default words get included automatically
-          return Array.from(new Set([...parsed, ...DEFAULT_RESTRICTED_WORDS]));
+          // Merge with default list so new default words get included automatically, but filter out requested words
+          const merged = Array.from(new Set([...parsed, ...filteredDefaults]));
+          const finalWords = filterOut(merged);
+          // If we removed some, we can write back to localStorage so it stays updated
+          if (finalWords.length !== parsed.length) {
+            localStorage.setItem("safetext_restricted_words", JSON.stringify(finalWords));
+          }
+          return finalWords;
         }
       } catch {
-        return DEFAULT_RESTRICTED_WORDS;
+        return filteredDefaults;
       }
     }
-    return DEFAULT_RESTRICTED_WORDS;
+    return filteredDefaults;
   });
 
   // Substring matching feature state (defaults to true)
@@ -404,7 +445,49 @@ export default function App() {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].category !== undefined) {
-          return parsed;
+          // Automatic upgrade of the default templates if they still hold previous placeholder content or old categories
+          const updatedTemplates = parsed.map((t: Template) => {
+            const updated = { ...t };
+            if (updated.id === "default-first-update" && (updated.content.startsWith("[PLACEHOLDER: Write your First Update") || updated.content.includes("re-view"))) {
+              updated.content = DEFAULT_TEMPLATES[0].content;
+            }
+            if (updated.id === "default-follow-up-first") {
+              updated.category = "Second Follow-up";
+              if (updated.content.startsWith("[PLACEHOLDER: Write your Follow-up After First Update") || updated.content.startsWith("[PLACEHOLDER:") || updated.content.includes("review")) {
+                updated.content = DEFAULT_TEMPLATES[1].content;
+              }
+            }
+            if (updated.id === "default-follow-up-mod" && (updated.content.startsWith("[PLACEHOLDER: Write your Follow-up After Modification") || updated.content.startsWith("[PLACEHOLDER:") || updated.content.includes("review"))) {
+              updated.content = DEFAULT_TEMPLATES[2].content;
+            }
+            if (updated.id === "default-delivery" && (updated.content.startsWith("[PLACEHOLDER: Write your Delivery Message") || updated.content.startsWith("[PLACEHOLDER:"))) {
+              updated.content = DEFAULT_TEMPLATES[3].content;
+            }
+            if (updated.id === "default-delivery-extend" && (updated.content.startsWith("[PLACEHOLDER: Write your Delivery Time Extend") || updated.content.startsWith("[PLACEHOLDER:"))) {
+              updated.content = DEFAULT_TEMPLATES[4].content;
+            }
+            if (updated.id === "default-delivery-approach" && (updated.content.startsWith("[PLACEHOLDER:") || updated.content.startsWith("i there,") || updated.content.length < 10)) {
+              updated.content = DEFAULT_TEMPLATES[5].content;
+            }
+            if (updated.id === "default-inbox" && (updated.content.startsWith("[PLACEHOLDER: Write your Inbox Message") || updated.content.startsWith("[PLACEHOLDER:") || updated.content.startsWith("Hi there,\n\nI hope you are doing great."))) {
+              updated.content = DEFAULT_TEMPLATES[6].content;
+            }
+            if (updated.id === "default-inbox-no-mod" && (updated.content.startsWith("[PLACEHOLDER: Write your Inbox Message Without Modification") || updated.content.startsWith("[PLACEHOLDER:"))) {
+              updated.content = DEFAULT_TEMPLATES[7].content;
+            }
+            if (updated.category === "Follow-up After First Update") {
+              updated.category = "Second Follow-up";
+            }
+            return updated;
+          });
+
+          DEFAULT_TEMPLATES.forEach(defaultT => {
+            if (!updatedTemplates.some(t => t.id === defaultT.id)) {
+              updatedTemplates.push(defaultT);
+            }
+          });
+
+          return updatedTemplates;
         }
       } catch {
         return DEFAULT_TEMPLATES;
@@ -450,6 +533,33 @@ export default function App() {
   // DOM Refs
   const editorRef = useRef<HTMLDivElement>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Developer Workstation UI States
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
+  const [isConsoleOpen, setIsConsoleOpen] = useState(true);
+  const [activeConsoleTab, setActiveConsoleTab] = useState<"terminal" | "problems">("terminal");
+  const [terminalLogs, setTerminalLogs] = useState<Array<{ id: string; time: string; type: "info" | "warn" | "success" | "sys"; text: string }>>([
+    { id: "1", time: new Date().toLocaleTimeString([], { hour12: false }), type: "sys", text: "DevWorkstation v2.5 IDE kernel booted. Buffer listener live." },
+    { id: "2", time: new Date().toLocaleTimeString([], { hour12: false }), type: "info", text: "Fiverr compliance rules loaded: 32 tokens active." }
+  ]);
+
+  const addLog = (text: string, type: "info" | "warn" | "success" | "sys" = "info") => {
+    const time = new Date().toLocaleTimeString([], { hour12: false });
+    setTerminalLogs(prev => [...prev.slice(-49), { id: Date.now().toString() + Math.random(), time, type, text }]);
+  };
+
+  // Global Keyboard Listener for Cmd+K / Ctrl+K Command Palette
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
 
   // Sync theme to root class list
   useEffect(() => {
@@ -636,8 +746,10 @@ export default function App() {
     }
     if (matches.length > 0) {
       addToast(`Detected ${matches.length} restricted word(s)`, "info");
+      addLog(`Linter re-scan complete: ${matches.length} restricted token(s) flagged.`, "warn");
     } else {
       addToast("No restricted words detected!", "success");
+      addLog("Linter re-scan complete: 0 restricted tokens detected. Clean buffer.", "success");
     }
   };
 
@@ -645,6 +757,7 @@ export default function App() {
     const matches = findMatches(text, restrictedWords, graspSubstrings);
     if (matches.length === 0) {
       addToast("No words to obfuscate.", "info");
+      addLog("Obfuscate triggered: buffer clean, 0 terms to transform.", "info");
       return;
     }
     const obText = obfuscateText(text, matches);
@@ -652,6 +765,7 @@ export default function App() {
     pushToHistory(obText, true);
     setObfuscatedFeedback(`✅ ${matches.length} word(s) obfuscated`);
     addToast("Restricted terms hyphenated successfully!", "success");
+    addLog(`Sanitizer transformed ${matches.length} flagged token(s) with hyphenation.`, "success");
 
     // Force editor display reset
     const el = editorRef.current;
@@ -663,12 +777,15 @@ export default function App() {
   const handleCopy = () => {
     if (!text) {
       addToast("Nothing to copy!", "error");
+      addLog("Copy command failed: editor buffer is empty.", "warn");
       return;
     }
     navigator.clipboard.writeText(text).then(() => {
       addToast("Copied safely to clipboard!", "success");
+      addLog(`Output buffer (${text.length} chars) copied to clipboard.`, "success");
     }).catch(() => {
       addToast("Clipboard access failed.", "error");
+      addLog("Clipboard API access error.", "warn");
     });
   };
 
@@ -708,10 +825,11 @@ export default function App() {
   // ==========================================
   const FIXED_CATEGORIES = [
     "First Update",
-    "Follow-up After First Update",
+    "Second Follow-up",
     "Follow-up After Modification",
     "Delivery Message",
     "Delivery Time Extend Message",
+    "Delivery approach",
     "Inbox Message",
     "Inbox Message Without Modification"
   ];
@@ -1041,31 +1159,70 @@ export default function App() {
       {/* ==========================================
           HEADER / WINDOW TITLE BAR
           ========================================== */}
-      <header className="sticky top-0 z-40 bg-[#f6f8fa]/95 dark:bg-[#161b22]/95 backdrop-blur-md border-b border-[#d0d7de] dark:border-[#30363d] px-4 py-3 sm:px-6">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {/* macOS window traffic lights (wink to developer vibes) */}
-            <div className="flex items-center gap-1.5 mr-2 select-none shrink-0">
-              <div className="w-3 h-3 rounded-full bg-[#f85149]/40 border border-[#f85149]/20" />
-              <div className="w-3 h-3 rounded-full bg-[#f0883e]/40 border border-[#f0883e]/20" />
-              <div className="w-3 h-3 rounded-full bg-[#3fb950]/40 border border-[#3fb950]/20" />
+      <header className="sticky top-0 z-40 bg-[#f6f8fa]/95 dark:bg-[#161b22]/95 backdrop-blur-md border-b border-[#d0d7de] dark:border-[#30363d] px-3 py-2 sm:px-6 sm:py-2.5">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* macOS window traffic lights with glow */}
+            <div className="hidden min-[380px]:flex items-center gap-1.5 mr-1 select-none shrink-0 group">
+              <div className="w-3 h-3 rounded-full bg-[#f85149] shadow-[0_0_6px_rgba(248,81,73,0.5)] flex items-center justify-center text-[8px] font-bold text-black opacity-90" />
+              <div className="w-3 h-3 rounded-full bg-[#f0883e] shadow-[0_0_6px_rgba(240,136,62,0.5)] flex items-center justify-center text-[8px] font-bold text-black opacity-90" />
+              <div className="w-3 h-3 rounded-full bg-[#3fb950] shadow-[0_0_6px_rgba(63,185,80,0.5)] flex items-center justify-center text-[8px] font-bold text-black opacity-90" />
             </div>
 
-            {/* Title / Wordmark as a filename prompt */}
-            <div className="flex items-center gap-2 font-mono">
+            {/* Path Breadcrumb & Terminal Title */}
+            <div className="flex items-center gap-1.5 font-mono min-w-0 text-xs sm:text-sm">
               <span className="text-[#58a6ff] font-bold">&gt;_</span>
-              <h1 id="app-title" className="font-bold text-sm tracking-tight text-[#24292f] dark:text-white flex items-center gap-1">
-                safetext-editor<span className="text-[#57606a] dark:text-[#8b949e]">.tsx</span>
+              <span className="hidden sm:inline text-[#57606a] dark:text-[#8b949e]">workstation/</span>
+              <h1 id="app-title" className="font-bold tracking-tight text-[#24292f] dark:text-white flex items-center gap-0.5 truncate">
+                fiverr-sanitizer<span className="text-[#57606a] dark:text-[#8b949e]">.tsx</span>
               </h1>
-              <span className="w-1.5 h-4 bg-[#58a6ff] inline-block animate-cursor-blink shrink-0"></span>
+              <span className="w-1.5 h-3.5 sm:h-4 bg-[#58a6ff] inline-block animate-cursor-blink shrink-0"></span>
+
+              {/* Git Branch Badge */}
+              <div className="hidden lg:flex items-center gap-1 px-2 py-0.5 bg-[#58a6ff]/10 text-[#58a6ff] border border-[#58a6ff]/20 rounded-md text-[10px] font-bold ml-2 shrink-0">
+                <GitBranch className="w-3 h-3" />
+                <span>main*</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Live Ticking Clock / Timer */}
+            {currentTime && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md font-mono text-[11px] text-[#24292f] dark:text-[#c9d1d9] select-none h-8 shadow-xs shrink-0">
+                <Clock className="w-3.5 h-3.5 text-[#58a6ff] animate-pulse" />
+                <span className="font-semibold">{currentTime}</span>
+              </div>
+            )}
+
+            {/* System Telemetry */}
+            <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md font-mono text-[10px] text-[#57606a] dark:text-[#8b949e] select-none h-8 shrink-0">
+              <div className="flex items-center gap-1 text-[#3fb950] font-bold">
+                <Cpu className="w-3 h-3 text-[#3fb950] animate-pulse" />
+                <span>0.8%</span>
+              </div>
+              <span className="text-[#d0d7de] dark:text-[#30363d]">|</span>
+              <div className="flex items-center gap-1 text-[#58a6ff] font-bold">
+                <HardDrive className="w-3 h-3 text-[#58a6ff]" />
+                <span>14.2 MB</span>
+              </div>
+            </div>
+
+            {/* Command Palette Trigger Button (⌘K) */}
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="px-2.5 py-1 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] rounded-md transition-all cursor-pointer h-8 flex items-center gap-1.5 font-mono text-xs font-semibold shadow-xs"
+              title="Open Command Palette (Ctrl+K)"
+            >
+              <Command className="w-3.5 h-3.5 text-[#58a6ff]" />
+              <span className="hidden sm:inline">Commands</span>
+              <kbd className="hidden sm:inline-block px-1.5 py-0.25 bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded text-[9px] text-[#57606a] dark:text-[#8b949e] font-sans font-bold">⌘K</kbd>
+            </button>
+
             {/* Templates Explorer Toggle Button */}
             <button
               onClick={() => setIsTemplatesDrawerOpen(!isTemplatesDrawerOpen)}
-              className={`p-1.5 border rounded-md transition-all cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold ${
+              className={`p-1.5 sm:px-2.5 border rounded-md transition-all cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold h-8 ${
                 isTemplatesDrawerOpen
                   ? "bg-[#58a6ff]/10 text-[#58a6ff] border-[#58a6ff]/30"
                   : "text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117]"
@@ -1079,7 +1236,7 @@ export default function App() {
             {/* Theme Toggle styled as a small coder icon button */}
             <button
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              className="p-1.5 text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] dark:hover:text-[#58a6ff] border border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117] rounded-md transition-all cursor-pointer"
+              className="p-1.5 text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] dark:hover:text-[#58a6ff] border border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117] rounded-md transition-all cursor-pointer h-8 flex items-center justify-center"
               title="Toggle Theme (Light/Dark)"
             >
               {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -1088,7 +1245,7 @@ export default function App() {
             {/* Mobile Sidebar Trigger */}
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="md:hidden p-1.5 text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] border border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117] rounded-md transition-all cursor-pointer"
+              className="md:hidden p-1.5 text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] border border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117] rounded-md transition-all cursor-pointer h-8 flex items-center justify-center"
               title="Open File Explorer Rules"
             >
               <Menu className="w-4 h-4" />
@@ -1100,53 +1257,53 @@ export default function App() {
       {/* ==========================================
           MAIN WORKSPACE GRID
           ========================================== */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 overflow-x-hidden">
         
         {/* ==========================================
             LEFT WORKSPACE - THE CODE AREA & ACTIONS
             ========================================== */}
-        <section className="md:col-span-2 flex flex-col gap-4">
+        <section className="md:col-span-2 flex flex-col gap-4 min-w-0">
 
           {/* IDE EDITOR COMPONENT */}
-          <div className="bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md shadow-sm flex flex-col flex-1 overflow-hidden">
+          <div className="bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md shadow-sm flex flex-col flex-1 overflow-hidden min-w-0">
             
             {/* Fake Inactive Tab Strip (Atmosphere) */}
-            <div className="flex bg-[#f6f8fa] dark:bg-[#0d1117] border-b border-[#d0d7de] dark:border-[#30363d] text-xs font-mono select-none overflow-x-auto shrink-0">
+            <div className="flex bg-[#f6f8fa] dark:bg-[#0d1117] border-b border-[#d0d7de] dark:border-[#30363d] text-xs font-mono select-none overflow-x-auto scrollbar-none shrink-0">
               {/* Active main tab */}
-              <div className="flex items-center gap-1.5 px-4 py-2 bg-[#fbfbfb] dark:bg-[#0a0e14] border-r border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] border-t-2 border-[#58a6ff] font-medium shrink-0">
+              <div className="flex items-center gap-1.5 px-3 py-2 sm:px-4 bg-[#fbfbfb] dark:bg-[#0a0e14] border-r border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] border-t-2 border-[#58a6ff] font-medium shrink-0">
                 <FileText className="w-3.5 h-3.5 text-[#58a6ff]" />
                 <span>message.txt</span>
                 <span className="text-[9px] text-[#3fb950] ml-1">●</span>
               </div>
               
               {/* Inactive fake files */}
-              <div className="flex items-center gap-1.5 px-4 py-2 text-[#57606a] dark:text-[#8b949e] border-r border-[#d0d7de]/40 dark:border-[#30363d]/40 shrink-0 select-none">
+              <div className="flex items-center gap-1.5 px-3 py-2 sm:px-4 text-[#57606a] dark:text-[#8b949e] border-r border-[#d0d7de]/40 dark:border-[#30363d]/40 shrink-0 select-none">
                 <span className="text-[#f0883e] font-bold text-[9px]">[!]</span>
                 <span>blocked_rules.json</span>
               </div>
-              <div className="flex items-center gap-1.5 px-4 py-2 text-[#57606a] dark:text-[#8b949e] border-r border-[#d0d7de]/40 dark:border-[#30363d]/40 shrink-0 select-none">
+              <div className="flex items-center gap-1.5 px-3 py-2 sm:px-4 text-[#57606a] dark:text-[#8b949e] border-r border-[#d0d7de]/40 dark:border-[#30363d]/40 shrink-0 select-none">
                 <span>fiverr_terms.md</span>
               </div>
             </div>
 
             {/* Diagnostic Terminal Output Summary (Live indicator header) */}
-            <div className="px-4 py-2.5 bg-[#f6f8fa]/50 dark:bg-[#161b22]/50 border-b border-[#d0d7de] dark:border-[#30363d] flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2 text-xs font-mono">
+            <div className="px-3 py-2 sm:px-4 sm:py-2.5 bg-[#f6f8fa]/50 dark:bg-[#161b22]/50 border-b border-[#d0d7de] dark:border-[#30363d] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-[11px] sm:text-xs font-mono min-w-0">
                 {matchedRanges.length > 0 ? (
-                  <span className="text-[#f0883e] font-medium flex items-center gap-1.5">
-                    <span className="inline-block w-2 h-2 rounded-full bg-[#f0883e] animate-ping"></span>
-                    [!] {matchedRanges.length} warning(s) detected. obfuscation recommended.
+                  <span className="text-[#f0883e] font-medium flex items-center gap-1.5 break-words">
+                    <span className="inline-block w-2 h-2 rounded-full bg-[#f0883e] animate-ping shrink-0"></span>
+                    <span>[!] {matchedRanges.length} warning(s) detected. obfuscation recommended.</span>
                   </span>
                 ) : (
                   <span className="text-[#3fb950] font-medium flex items-center gap-1.5">
-                    <span className="inline-block w-2 h-2 rounded-full bg-[#3fb950]"></span>
-                    [✓] 0 issues found in current buffer.
+                    <span className="inline-block w-2 h-2 rounded-full bg-[#3fb950] shrink-0"></span>
+                    <span>[✓] 0 issues found in current buffer.</span>
                   </span>
                 )}
               </div>
 
               {/* Undo/Redo Buttons */}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 ml-auto">
                 <button
                   onClick={handleUndo}
                   disabled={historyIndex === 0}
@@ -1167,28 +1324,32 @@ export default function App() {
             </div>
 
             {/* THE CODE-EDITOR WORKSPACE (Line Numbers Gutter + contentEditable editor) */}
-            <div className="flex flex-row flex-1 bg-[#fbfbfb] dark:bg-[#0a0e14] min-h-[380px] overflow-hidden relative">
+            <div className="flex flex-row flex-1 bg-[#fbfbfb] dark:bg-[#0a0e14] min-h-[280px] sm:min-h-[350px] overflow-hidden relative">
               
               {/* CODE LINE GUTTER (Non-selectable line counters) */}
-              <div className="select-none text-right pr-3 pl-4 pt-4 border-r border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117] shrink-0 font-mono text-sm leading-relaxed text-[#57606a] dark:text-[#484f58] min-h-full">
+              <div className="select-none text-right pr-2.5 pl-2.5 pt-3 sm:pr-4 sm:pl-4 sm:pt-4 border-r border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117] shrink-0 font-mono text-[11px] sm:text-xs text-[#57606a] dark:text-[#8b949e] min-h-full">
                 {Array.from({ length: Math.max(1, text.split('\n').length) }).map((_, i) => (
-                  <div key={i} className="editor-gutter-num h-[1.6em] text-right text-xs">
-                    {i + 1}
+                  <div 
+                    key={i} 
+                    className="editor-gutter-num flex items-center justify-end font-bold select-none whitespace-nowrap text-[#57606a]/80 dark:text-[#8b949e]/60" 
+                    style={{ height: '1.625rem', lineHeight: '1.625rem' }}
+                  >
+                    <span>{String(i + 1).padStart(2, '0')}</span>
                   </div>
                 ))}
               </div>
 
               {/* CONTENT EDITABLE BUFFER */}
-              <div className="p-4 flex-1 overflow-y-auto bg-[#fbfbfb] dark:bg-[#0a0e14]">
+              <div className="p-3 sm:p-4 flex-1 overflow-y-auto bg-[#fbfbfb] dark:bg-[#0a0e14]">
                 <div
                   ref={editorRef}
                   contentEditable
                   onInput={handleInput}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
-                  placeholder="Paste your freelance message here... (e.g. Send me an email at customerr@gmail.com or text my whatsapp to discuss.)"
-                  className="w-full min-h-[350px] outline-hidden font-mono text-sm leading-relaxed whitespace-pre-wrap break-all select-text empty:before:content-[attr(placeholder)] empty:before:text-[#57606a]/60 dark:empty:before:text-[#8b949e]/40 empty:before:pointer-events-none empty:before:italic text-[#24292f] dark:text-[#c9d1d9]"
-                  style={{ minHeight: '350px', lineHeight: '1.6em' }}
+                  placeholder="Paste your Fiverr message here..."
+                  className="w-full min-h-[280px] sm:min-h-[350px] outline-hidden font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words select-text empty:before:content-[attr(placeholder)] empty:before:text-[#57606a]/60 dark:empty:before:text-[#8b949e]/40 empty:before:pointer-events-none empty:before:italic text-[#24292f] dark:text-[#c9d1d9]"
+                  style={{ minHeight: '280px', lineHeight: '1.625rem' }}
                 />
               </div>
             </div>
@@ -1200,7 +1361,7 @@ export default function App() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="bg-[#161b22] border-t border-[#3fb950]/30 px-4 py-2 flex items-center justify-between"
+                  className="bg-[#161b22] border-t border-[#3fb950]/30 px-3 py-2 sm:px-4 flex items-center justify-between"
                 >
                   <span className="text-xs font-mono font-medium text-[#3fb950] flex items-center gap-1.5">
                     [✓] {obfuscatedFeedback}
@@ -1219,7 +1380,7 @@ export default function App() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="bg-[#161b22] border-t border-[#f0883e]/30 px-4 py-2.5"
+                  className="bg-[#161b22] border-t border-[#f0883e]/30 px-3 py-2.5 sm:px-4"
                 >
                   <div className="text-xs font-mono text-[#f0883e] flex flex-wrap gap-x-1.5 items-center">
                     <span className="font-semibold">[!] Flagged keywords:</span>
@@ -1233,10 +1394,102 @@ export default function App() {
               )}
             </AnimatePresence>
 
+            {/* INTEGRATED DEVELOPER CONSOLE DRAWER */}
+            <div className="border-t border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117] shrink-0 font-mono">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-[#eaeef2] dark:bg-[#161b22] border-b border-[#d0d7de] dark:border-[#30363d] text-[11px] select-none">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => { setIsConsoleOpen(true); setActiveConsoleTab("terminal"); }}
+                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                      isConsoleOpen && activeConsoleTab === "terminal"
+                        ? "text-[#58a6ff] font-bold bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d]"
+                        : "text-[#57606a] dark:text-[#8b949e] hover:text-[#24292f] dark:hover:text-white"
+                    }`}
+                  >
+                    <Terminal className="w-3 h-3 text-[#58a6ff]" />
+                    <span>TERMINAL</span>
+                    <span className="text-[9px] px-1 bg-[#58a6ff]/20 text-[#58a6ff] rounded-full font-bold">{terminalLogs.length}</span>
+                  </button>
+
+                  <button
+                    onClick={() => { setIsConsoleOpen(true); setActiveConsoleTab("problems"); }}
+                    className={`flex items-center gap-1.5 px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                      isConsoleOpen && activeConsoleTab === "problems"
+                        ? "text-[#58a6ff] font-bold bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d]"
+                        : "text-[#57606a] dark:text-[#8b949e] hover:text-[#24292f] dark:hover:text-white"
+                    }`}
+                  >
+                    <AlertCircle className={`w-3 h-3 ${matchedRanges.length > 0 ? "text-[#f0883e]" : "text-[#3fb950]"}`} />
+                    <span>PROBLEMS</span>
+                    <span className={`text-[9px] px-1 rounded-full font-bold ${
+                      matchedRanges.length > 0 ? "bg-[#f0883e]/20 text-[#f0883e]" : "bg-[#3fb950]/20 text-[#3fb950]"
+                    }`}>{matchedRanges.length}</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 text-[#57606a] dark:text-[#8b949e]">
+                  {isConsoleOpen && activeConsoleTab === "terminal" && (
+                    <button
+                      onClick={() => setTerminalLogs([])}
+                      className="hover:text-[#f85149] cursor-pointer text-[10px] px-1.5 py-0.5 border border-[#d0d7de] dark:border-[#30363d] rounded"
+                      title="Clear terminal logs"
+                    >
+                      Clear
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+                    className="hover:text-[#58a6ff] cursor-pointer"
+                    title={isConsoleOpen ? "Collapse Console" : "Expand Console"}
+                  >
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isConsoleOpen ? "" : "rotate-180"}`} />
+                  </button>
+                </div>
+              </div>
+
+              {isConsoleOpen && (
+                <div className="p-2 sm:p-3 max-h-32 overflow-y-auto space-y-1 text-[11px] leading-relaxed bg-[#0a0e14] text-[#c9d1d9] border-b border-[#30363d]">
+                  {activeConsoleTab === "terminal" ? (
+                    terminalLogs.length === 0 ? (
+                      <div className="text-[#8b949e] italic text-[10px] px-1">Console logs cleared. Ready for input events...</div>
+                    ) : (
+                      terminalLogs.map(log => (
+                        <div key={log.id} className="flex items-start gap-2 font-mono hover:bg-[#161b22]/50 px-1 py-0.5 rounded">
+                          <span className="text-[#8b949e] select-none text-[10px]">[{log.time}]</span>
+                          {log.type === "sys" && <span className="text-[#58a6ff] font-bold text-[10px]">[SYS]</span>}
+                          {log.type === "info" && <span className="text-[#3fb950] font-bold text-[10px]">[INFO]</span>}
+                          {log.type === "warn" && <span className="text-[#f0883e] font-bold text-[10px]">[WARN]</span>}
+                          {log.type === "success" && <span className="text-[#3fb950] font-bold text-[10px]">[OK]</span>}
+                          <span className="text-[#c9d1d9] break-all">{log.text}</span>
+                        </div>
+                      ))
+                    )
+                  ) : (
+                    matchedRanges.length === 0 ? (
+                      <div className="text-[#3fb950] flex items-center gap-1.5 px-1 py-1 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>No restricted words or rule violations found in workspace.</span>
+                      </div>
+                    ) : (
+                      matchedRanges.map((m, idx) => (
+                        <div key={idx} className="flex items-center justify-between gap-2 px-1 py-1 hover:bg-[#161b22] rounded text-[#f0883e]">
+                          <span className="font-bold flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#f0883e]"></span>
+                            Restricted Word Flag: "{m.word}"
+                          </span>
+                          <span className="text-[#8b949e] text-[10px]">Index: {m.start}..{m.end}</span>
+                        </div>
+                      ))
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* EDITOR TERMINAL STATUS BAR */}
-            <div className="p-4 bg-[#f6f8fa] dark:bg-[#161b22]/70 border-t border-[#d0d7de] dark:border-[#30363d] flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+            <div className="p-3 sm:p-4 bg-[#f6f8fa] dark:bg-[#161b22]/70 border-t border-[#d0d7de] dark:border-[#30363d] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
               {/* Lines / Characters Counter */}
-              <div className="flex items-center gap-4 text-xs font-mono text-[#57606a] dark:text-[#8b949e]">
+              <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4 text-[11px] sm:text-xs font-mono text-[#57606a] dark:text-[#8b949e]">
                 <div>
                   ln <span className="font-semibold text-[#24292f] dark:text-white">{text.split('\n').length}</span>
                 </div>
@@ -1249,11 +1502,11 @@ export default function App() {
               </div>
 
               {/* Monospace Action Buttons */}
-              <div className="flex flex-wrap items-center justify-end gap-2.5 w-full sm:w-auto">
+              <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-2.5 w-full sm:w-auto">
                 <button
                   id="detect-words-button"
                   onClick={triggerManualDetect}
-                  className="px-4 py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-xs font-bold font-mono rounded-md transition-colors flex items-center gap-1.5 cursor-pointer"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[11px] sm:text-xs font-bold font-mono rounded-md transition-colors flex items-center gap-1.5 cursor-pointer h-8"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Detect Words</span>
@@ -1262,7 +1515,7 @@ export default function App() {
                 {matchedRanges.length > 0 && (
                   <button
                     onClick={triggerObfuscation}
-                    className="px-4 py-2 bg-gradient-to-r from-[#f0883e] to-[#f0883e]/90 hover:from-[#f0883e]/90 hover:to-[#f0883e]/80 text-white text-xs font-bold font-mono rounded-md transition-colors border border-transparent flex items-center gap-1.5 cursor-pointer"
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#f0883e] to-[#f0883e]/90 hover:from-[#f0883e]/90 hover:to-[#f0883e]/80 text-white text-[11px] sm:text-xs font-bold font-mono rounded-md transition-colors border border-transparent flex items-center gap-1.5 cursor-pointer h-8"
                   >
                     <Shield className="w-3.5 h-3.5" />
                     <span>Obfuscate</span>
@@ -1300,7 +1553,7 @@ export default function App() {
                 <button
                   onClick={checkGrammarWithAI}
                   disabled={isGrammarChecking}
-                  className="px-4 py-2 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] text-xs font-medium font-mono rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer h-8"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] text-[11px] sm:text-xs font-medium font-mono rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer h-8"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
                   <span>{isGrammarChecking ? "checking..." : "fix grammar"}</span>
@@ -1308,7 +1561,7 @@ export default function App() {
 
                 <button
                   onClick={handleSaveCurrentAsTemplateTrigger}
-                  className="px-4 py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-xs font-bold font-mono rounded-md transition-all flex items-center gap-1.5 cursor-pointer h-8"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[11px] sm:text-xs font-bold font-mono rounded-md transition-all flex items-center gap-1.5 cursor-pointer h-8"
                   title="Save current editor content as a reusable template"
                 >
                   <Save className="w-3.5 h-3.5" />
@@ -1317,7 +1570,7 @@ export default function App() {
 
                 <button
                   onClick={handleCopy}
-                  className="px-4 py-2 bg-[#161b22] dark:bg-[#30363d] hover:bg-[#30363d] dark:hover:bg-[#484f58] border border-[#d0d7de] dark:border-[#484f58] text-[#24292f] dark:text-[#c9d1d9] text-xs font-semibold font-mono rounded-md transition-colors flex items-center gap-1.5 cursor-pointer h-8"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#1dbf73] hover:bg-[#1dbf73]/95 text-white text-[11px] sm:text-xs font-bold font-mono rounded-md transition-all flex items-center gap-1.5 cursor-pointer h-8 shadow-[0_0_12px_rgba(29,191,115,0.3)] active:scale-[0.98] border-none"
                   title="Copy the final clean plain text only (strips formatting)"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -1650,7 +1903,7 @@ export default function App() {
           ========================================== */}
       <footer className="w-full py-4 px-6 border-t border-[#d0d7de] dark:border-[#30363d] mt-auto shrink-0 select-none bg-[#f6f8fa] dark:bg-[#161b22]/50 text-[#57606a] dark:text-[#8b949e] font-mono text-xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>SafeText Editor &copy; {new Date().getFullYear()} — Fiverr-Safe Sanitizer</span>
+          <span>Bad Word Sanitizer &copy; {new Date().getFullYear()} — Fiverr-Safe Sanitizer</span>
           <span className="font-semibold text-[#24292f] dark:text-[#c9d1d9]">Built by Subroto Kumar Barman</span>
         </div>
       </footer>
@@ -1660,7 +1913,7 @@ export default function App() {
           ========================================== */}
       <AnimatePresence>
         {isTemplateModalOpen && (
-          <div className="fixed inset-0 z-55 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-55 flex items-center justify-center p-3 sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.6 }}
@@ -1672,7 +1925,7 @@ export default function App() {
               initial={{ scale: 0.97, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.97, opacity: 0 }}
-              className="bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-6 max-w-md w-full relative z-10 font-mono text-xs text-[#24292f] dark:text-[#c9d1d9]"
+              className="bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-4 sm:p-6 max-w-md w-[92vw] sm:w-full relative z-10 font-mono text-xs text-[#24292f] dark:text-[#c9d1d9] max-h-[90vh] overflow-y-auto"
             >
               {/* Header */}
               <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#d0d7de] dark:border-[#30363d]">
@@ -1840,7 +2093,7 @@ export default function App() {
       {/* ==========================================
           TOAST NOTIFICATION ENGINE
           ========================================== */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+      <div className="fixed bottom-3 right-3 left-3 sm:left-auto sm:right-4 z-50 flex flex-col gap-2 max-w-full sm:max-w-sm pointer-events-none">
         <AnimatePresence>
           {toasts.map(t => (
             <motion.div
@@ -1864,6 +2117,189 @@ export default function App() {
             </motion.div>
           ))}
         </AnimatePresence>
+      </div>
+
+      {/* ==========================================
+          COMMAND PALETTE OVERLAY MODAL (⌘K)
+          ========================================== */}
+      <AnimatePresence>
+        {isCommandPaletteOpen && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCommandPaletteOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -10 }}
+              className="relative w-full max-w-xl bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-xl shadow-2xl overflow-hidden z-10 font-mono text-xs"
+            >
+              {/* Search Bar */}
+              <div className="flex items-center gap-2 px-4 py-3 border-b border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117]">
+                <Search className="w-4 h-4 text-[#58a6ff]" />
+                <input
+                  type="text"
+                  value={commandPaletteQuery}
+                  onChange={(e) => setCommandPaletteQuery(e.target.value)}
+                  placeholder="Type a command or search actions..."
+                  className="w-full bg-transparent outline-hidden text-[#24292f] dark:text-white placeholder:text-[#57606a] dark:placeholder:text-[#8b949e] font-mono text-xs"
+                  autoFocus
+                />
+                <kbd className="px-1.5 py-0.5 bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded text-[9px] text-[#57606a] dark:text-[#8b949e]">ESC</kbd>
+              </div>
+
+              {/* Command List */}
+              <div className="p-2 max-h-80 overflow-y-auto space-y-1">
+                {[
+                  {
+                    id: "obfuscate",
+                    title: "Obfuscate Restricted Terms",
+                    icon: Shield,
+                    color: "text-[#f0883e]",
+                    shortcut: "Transform",
+                    action: () => { triggerObfuscation(); setIsCommandPaletteOpen(false); }
+                  },
+                  {
+                    id: "detect",
+                    title: "Re-Detect Forbidden Words",
+                    icon: RefreshCw,
+                    color: "text-[#58a6ff]",
+                    shortcut: "Rescan",
+                    action: () => { triggerManualDetect(); setIsCommandPaletteOpen(false); }
+                  },
+                  {
+                    id: "grammar",
+                    title: "Run AI Grammar Audit",
+                    icon: Sparkles,
+                    color: "text-[#58a6ff]",
+                    shortcut: "Audit",
+                    action: () => { checkGrammarWithAI(); setIsCommandPaletteOpen(false); }
+                  },
+                  {
+                    id: "copy",
+                    title: "Copy Plain Text Result",
+                    icon: Copy,
+                    color: "text-[#3fb950]",
+                    shortcut: "Clipboard",
+                    action: () => { handleCopy(); setIsCommandPaletteOpen(false); }
+                  },
+                  {
+                    id: "templates",
+                    title: "Toggle Templates Explorer",
+                    icon: FileText,
+                    color: "text-[#58a6ff]",
+                    shortcut: "Drawer",
+                    action: () => { setIsTemplatesDrawerOpen(!isTemplatesDrawerOpen); setIsCommandPaletteOpen(false); }
+                  },
+                  {
+                    id: "substring",
+                    title: `Toggle Substring Grasping (${graspSubstrings ? "ACTIVE" : "OFF"})`,
+                    icon: Search,
+                    color: "text-[#58a6ff]",
+                    shortcut: "Substrings",
+                    action: () => {
+                      setGraspSubstrings(!graspSubstrings);
+                      addToast(`Substring grasping set to ${!graspSubstrings}`, "info");
+                      setIsCommandPaletteOpen(false);
+                    }
+                  },
+                  {
+                    id: "theme",
+                    title: `Switch Theme to ${theme === "dark" ? "Light" : "Dark"} Mode`,
+                    icon: theme === "dark" ? Sun : Moon,
+                    color: "text-[#f0883e]",
+                    shortcut: "Appearance",
+                    action: () => { setTheme(theme === "dark" ? "light" : "dark"); setIsCommandPaletteOpen(false); }
+                  },
+                  {
+                    id: "clear",
+                    title: "Clear Editor Buffer",
+                    icon: Trash2,
+                    color: "text-[#f85149]",
+                    shortcut: "Reset",
+                    action: () => {
+                      setText("");
+                      updateEditorContentDirectly("");
+                      addToast("Editor buffer cleared.", "info");
+                      addLog("Editor buffer wiped by user.", "warn");
+                      setIsCommandPaletteOpen(false);
+                    }
+                  }
+                ]
+                  .filter(cmd => cmd.title.toLowerCase().includes(commandPaletteQuery.toLowerCase()))
+                  .map(cmd => (
+                    <button
+                      key={cmd.id}
+                      onClick={cmd.action}
+                      className="w-full text-left px-3 py-2.5 rounded-lg hover:bg-[#f6f8fa] dark:hover:bg-[#21262d] flex items-center justify-between text-[#24292f] dark:text-[#c9d1d9] transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <cmd.icon className={`w-4 h-4 ${cmd.color}`} />
+                        <span className="font-semibold text-xs">{cmd.title}</span>
+                      </div>
+                      <span className="text-[10px] text-[#57606a] dark:text-[#8b949e] bg-[#f6f8fa] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] px-2 py-0.5 rounded">
+                        {cmd.shortcut}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ==========================================
+          STICKY MOBILE TOOLBAR (Phone Responsiveness)
+          ========================================== */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#f6f8fa]/95 dark:bg-[#161b22]/95 backdrop-blur-md border-t border-[#d0d7de] dark:border-[#30363d] p-2 flex items-center justify-around shadow-lg font-mono">
+        <button
+          onClick={triggerManualDetect}
+          className="flex flex-col items-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Detect</span>
+        </button>
+
+        <button
+          onClick={triggerObfuscation}
+          className={`flex flex-col items-center gap-1 text-[10px] p-1.5 cursor-pointer ${
+            matchedRanges.length > 0 ? "text-[#f0883e] font-bold animate-pulse" : "text-[#57606a] dark:text-[#8b949e]"
+          }`}
+        >
+          <Shield className="w-4 h-4" />
+          <span>Obfuscate</span>
+        </button>
+
+        <button
+          onClick={checkGrammarWithAI}
+          className="flex flex-col items-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Grammar</span>
+        </button>
+
+        <button
+          onClick={handleCopy}
+          className="flex flex-col items-center gap-1 text-[10px] text-[#3fb950] font-bold p-1.5 cursor-pointer"
+        >
+          <Copy className="w-4 h-4" />
+          <span>Copy</span>
+        </button>
+
+        <button
+          onClick={() => setIsTemplatesDrawerOpen(!isTemplatesDrawerOpen)}
+          className="flex flex-col items-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
+        >
+          <FileText className="w-4 h-4" />
+          <span>Templates</span>
+        </button>
       </div>
 
     </div>
@@ -2005,7 +2441,7 @@ function UnifiedSidebar({
               onChange={(e) => setNewWordInput(e.target.value)}
               placeholder="New custom flag..."
               maxLength={30}
-              className="flex-1 px-3 py-1.5 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md text-xs outline-hidden focus:border-[#58a6ff] text-[#24292f] dark:text-[#c9d1d9] placeholder-[#57606a]/50 dark:placeholder-[#8b949e]/30 font-mono"
+              className="flex-1 min-w-0 px-3 py-1.5 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md text-xs outline-hidden focus:border-[#58a6ff] text-[#24292f] dark:text-[#c9d1d9] placeholder-[#57606a]/50 dark:placeholder-[#8b949e]/30 font-mono"
             />
             <button
               id="add-word-button"
@@ -2024,7 +2460,7 @@ function UnifiedSidebar({
               value={wordFilter}
               onChange={(e) => setWordFilter(e.target.value)}
               placeholder="Filter tracked tokens..."
-              className="w-full px-3 py-1.5 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md text-[11px] outline-hidden focus:border-[#58a6ff] text-[#24292f] dark:text-[#c9d1d9] placeholder-[#57606a]/50 dark:placeholder-[#8b949e]/30 font-mono"
+              className="w-full min-w-0 px-3 py-1.5 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md text-[11px] outline-hidden focus:border-[#58a6ff] text-[#24292f] dark:text-[#c9d1d9] placeholder-[#57606a]/50 dark:placeholder-[#8b949e]/30 font-mono"
             />
             {wordFilter && (
               <button 
@@ -2045,14 +2481,14 @@ function UnifiedSidebar({
                   key={idx}
                   className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] border border-transparent hover:border-[#d0d7de] dark:hover:border-[#30363d] group transition-all text-[#24292f] dark:text-[#c9d1d9]"
                 >
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[#57606a] dark:text-[#484f58] select-none">#</span>
-                    <span className="font-medium">{word}</span>
+                  <div className="flex items-center gap-1.5 min-w-0 truncate">
+                    <span className="text-[#57606a] dark:text-[#484f58] select-none shrink-0">#</span>
+                    <span className="font-medium truncate">{word}</span>
                   </div>
                   <button
                     type="button"
                     onClick={() => handleRemoveWord(word)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 text-[#57606a] dark:text-[#8b949e] hover:text-[#f85149] transition-all cursor-pointer"
+                    className="opacity-70 sm:opacity-0 group-hover:opacity-100 p-1 text-[#57606a] dark:text-[#8b949e] hover:text-[#f85149] transition-all cursor-pointer shrink-0"
                     title={`Delete ${word}`}
                   >
                     <X className="w-3.5 h-3.5" />
@@ -2266,6 +2702,7 @@ function UnifiedSidebar({
           </div>
         </div>
       )}
+
     </div>
   );
 }
