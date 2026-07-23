@@ -121,7 +121,7 @@ const DEFAULT_TEMPLATES: Template[] = [
     id: "default-delivery-approach-no-mod",
     name: "Default",
     category: "Delivery Approach Without Modification",
-    content: "Hello there,\n\nI hope you are doing great.\n\nSince I've completed all the assigned tasks from my end, can I deliver the work to you?\n\nNo worries about the transition; you will receive 30 days of ongoing support from me starting today. If you notice any minor tweaks needed or have questions about the new page, just message me here in the Fiverr Inbox, and I will take care of it immediately.\n\nThank you for the continued trust in my work. I look forward to your thoughts!\n\nBest regards,"
+    content: "Hi there,\n\nI hope you are doing great.\n\nSince I've completed all the assigned tasks from my end, can I deliver the work to you?\n\nNo worries about the transition; you will receive 30 days of ongoing support from me starting today. If you notice any minor tweaks needed or have questions about the new page, just message me here in the Fiverr Inbox, and I will take care of it immediately.\n\nThank you for the continued trust in my work. I look forward to your thoughts!\n\nBest regards,"
   }
 ];
 
@@ -208,18 +208,16 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
-// Highlight restricted match segments and apply grammar wavy underlines
-function renderDecoratedHtml(text: string, restrictedMatches: MatchRange[], grammarIssues: GrammarIssue[]): string {
+// Highlight restricted match segments in the editor buffer
+function renderDecoratedHtml(text: string, restrictedMatches: MatchRange[], _grammarIssues?: GrammarIssue[]): string {
   if (text.length === 0) return "";
   
   const styles: {
     char: string;
     restricted: boolean;
-    grammar: GrammarIssue | null;
   }[] = Array.from({ length: text.length }, (_, i) => ({
     char: text[i],
     restricted: false,
-    grammar: null,
   }));
 
   // Apply restricted matches
@@ -231,28 +229,15 @@ function renderDecoratedHtml(text: string, restrictedMatches: MatchRange[], gram
     }
   }
 
-  // Apply grammar issues (only those still valid)
-  for (const g of grammarIssues) {
-    if (g.startIndex >= 0 && g.endIndex <= text.length && g.startIndex < g.endIndex) {
-      if (text.slice(g.startIndex, g.endIndex) === g.original) {
-        for (let i = g.startIndex; i < g.endIndex; i++) {
-          styles[i].grammar = g;
-        }
-      }
-    }
-  }
-
   let html = "";
   let i = 0;
   while (i < styles.length) {
     const start = i;
     const isRestricted = styles[start].restricted;
-    const grammarIssue = styles[start].grammar;
     
     while (
       i < styles.length && 
-      styles[i].restricted === isRestricted && 
-      styles[i].grammar === grammarIssue
+      styles[i].restricted === isRestricted
     ) {
       i++;
     }
@@ -260,24 +245,9 @@ function renderDecoratedHtml(text: string, restrictedMatches: MatchRange[], gram
     const segmentText = text.slice(start, i);
     let escaped = escapeHtml(segmentText).replace(/\n/g, "<br>");
     
-    if (isRestricted || grammarIssue) {
-      let classes = "";
-      let stylesAttr = "";
-      
-      if (isRestricted) {
-        classes += " bg-[rgba(240,136,62,0.18)] text-[#f0883e] font-mono font-medium px-0.5 rounded-[3px] border-b border-[#f0883e]/80";
-      }
-      
-      if (grammarIssue) {
-        // Red for spelling & critical, yellow/amber for minor/punctuation
-        let color = "#ef4444"; // red for spelling & critical
-        if (grammarIssue.severity === "minor") color = "#f59e0b"; // yellow/amber for minor/punctuation
-        
-        stylesAttr += `text-decoration: underline wavy ${color}; text-decoration-skip-ink: none; text-underline-offset: 3px;`;
-        classes += " cursor-pointer hover:bg-amber-500/10 transition-colors";
-      }
-      
-      html += `<span class="${classes.trim()}" style="${stylesAttr}" ${isRestricted ? 'data-restricted="true"' : ''} ${grammarIssue ? `data-grammar-id="${grammarIssue.startIndex}"` : ''}>${escaped}</span>`;
+    if (isRestricted) {
+      const classes = "bg-[rgba(240,136,62,0.18)] text-[#f0883e] font-mono font-medium px-0.5 rounded-[3px] border-b border-[#f0883e]/80";
+      html += `<span class="${classes}" data-restricted="true">${escaped}</span>`;
     } else {
       html += escaped;
     }
@@ -973,6 +943,7 @@ export default function App() {
     "Delivery Message",
     "Delivery Time Extend Message",
     "Delivery approach",
+    "Delivery Approach Without Modification",
     "Inbox Message",
     "Inbox Message Without Modification"
   ];
@@ -2724,23 +2695,26 @@ function UnifiedSidebar({
           <div>
             <h2 className="text-xs font-bold font-mono text-[#24292f] dark:text-white uppercase tracking-wider flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-[#58a6ff]" />
-              <span>Real-Time Grammar Auditor</span>
+              <span>Basic Grammar Check</span>
             </h2>
             <p className="text-xs text-[#57606a] dark:text-[#8b949e] mt-1.5 font-sans">
-              Check your message for common grammatical, punctuation, and spelling mistakes.
+              Instant client-side verification for essential capitalization, spacing, contractions, and basic punctuation.
             </p>
           </div>
 
           {/* Pure Client NLP Status & Action */}
-          <div className="p-3 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md flex flex-col gap-3 font-mono shrink-0">
+          <div className="p-3 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md flex flex-col gap-3 font-mono shrink-0 shadow-xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-[#57606a] dark:text-[#8b949e] uppercase">Engine:</span>
-              <span className="text-[10px] px-2 py-0.5 bg-[#3fb950]/10 border border-[#3fb950]/30 text-[#3fb950] font-bold rounded">
-                100% Client-Side NLP
+              <span className="text-[10px] px-2 py-0.5 bg-[#3fb950]/10 border border-[#3fb950]/30 text-[#3fb950] font-bold rounded flex items-center gap-1">
+                <Check className="w-3 h-3 text-[#3fb950]" />
+                <span>Basic Grammar Engine</span>
               </span>
             </div>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => checkGrammarWithAI(true)}
               disabled={isGrammarChecking}
               type="button"
@@ -2749,15 +2723,15 @@ function UnifiedSidebar({
               {isGrammarChecking ? (
                 <>
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Auditing content...</span>
+                  <span>Checking basic grammar...</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
-                  <span>Forced Audit Check</span>
+                  <span>Scan Basic Grammar</span>
                 </>
               )}
-            </button>
+            </motion.button>
           </div>
 
           {/* Persistent Error Banner inside Grammar tab */}
@@ -2784,93 +2758,106 @@ function UnifiedSidebar({
           {grammarSuggestions.length > 0 && (
             <div className="flex items-center justify-between font-mono shrink-0">
               <span className="text-[10px] font-bold text-[#57606a] dark:text-[#8b949e] uppercase">
-                {grammarSuggestions.length} issues flagged
+                {grammarSuggestions.length} basic issue{grammarSuggestions.length > 1 ? "s" : ""} found
               </span>
-              <button
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={applyAllGrammarSuggestions}
                 type="button"
-                className="px-2 py-1 bg-[#3fb950]/10 hover:bg-[#3fb950]/20 border border-[#3fb950]/30 text-[#3fb950] text-[10px] font-bold rounded-md transition-colors cursor-pointer"
+                className="px-2.5 py-1 bg-[#3fb950]/15 hover:bg-[#3fb950]/25 border border-[#3fb950]/40 text-[#3fb950] text-[10px] font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1"
               >
-                Apply All
-              </button>
+                <CheckCircle2 className="w-3 h-3" />
+                <span>Fix All Basic Grammar</span>
+              </motion.button>
             </div>
           )}
 
           {/* List of Grammar Issue Cards */}
           <div className="flex-1 overflow-y-auto max-h-[350px] md:max-h-[450px] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-2 bg-[#ffffff] dark:bg-[#0a0e14] flex flex-col gap-2">
-            {grammarSuggestions.map((issue, idx) => {
-              // Determine severity coloring
-              let sevBg = "bg-[#dc2626]/10 text-[#dc2626] border-[#dc2626]/30";
-              if (issue.severity === "minor") sevBg = "bg-[#d97706]/10 text-[#d97706] border-[#d97706]/30";
-              else if (issue.severity === "spelling") sevBg = "bg-[#2563eb]/10 text-[#2563eb] border-[#2563eb]/30";
-              
-              return (
-                <div
-                  key={idx}
-                  className="p-3 bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md flex flex-col gap-2 font-mono text-xs text-[#24292f] dark:text-[#c9d1d9]"
-                >
-                  {/* Header Row: Category Badge + Severity */}
-                  <div className="flex items-center justify-between gap-2 border-b border-[#d0d7de]/50 dark:border-[#30363d]/50 pb-1.5">
-                    <span className="font-bold text-[10px] text-[#24292f] dark:text-slate-200 uppercase truncate" title={issue.type}>
-                      {issue.type}
-                    </span>
-                    <span className={`text-[8px] px-1.5 py-0.25 rounded-full border font-bold uppercase shrink-0 ${sevBg}`}>
-                      {issue.severity}
-                    </span>
-                  </div>
-
-                  {/* Issue visual correction: flagged word vs suggestion */}
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="line-through text-[#f85149] select-all bg-[#f85149]/5 px-1 py-0.25 rounded-sm font-medium">
-                        {issue.original}
+            <AnimatePresence mode="popLayout">
+              {grammarSuggestions.map((issue, idx) => {
+                let sevBg = "bg-[#dc2626]/10 text-[#dc2626] border-[#dc2626]/30";
+                if (issue.severity === "minor") sevBg = "bg-[#d97706]/10 text-[#d97706] border-[#d97706]/30";
+                else if (issue.severity === "spelling") sevBg = "bg-[#2563eb]/10 text-[#2563eb] border-[#2563eb]/30";
+                
+                return (
+                  <motion.div
+                    key={issue.startIndex + "-" + issue.original + "-" + idx}
+                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="p-3 bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md flex flex-col gap-2 font-mono text-xs text-[#24292f] dark:text-[#c9d1d9] shadow-xs"
+                  >
+                    {/* Header Row: Category Badge + Severity */}
+                    <div className="flex items-center justify-between gap-2 border-b border-[#d0d7de]/50 dark:border-[#30363d]/50 pb-1.5">
+                      <span className="font-bold text-[10px] text-[#24292f] dark:text-slate-200 uppercase truncate" title={issue.type}>
+                        {issue.type}
                       </span>
-                      <ChevronRight className="w-3.5 h-3.5 text-[#57606a] dark:text-[#8b949e] shrink-0" />
-                      <span className="text-[#3fb950] font-bold select-all bg-[#3fb950]/5 px-1 py-0.25 rounded-sm">
-                        {issue.suggestion}
+                      <span className={`text-[8px] px-1.5 py-0.25 rounded-full border font-bold uppercase shrink-0 ${sevBg}`}>
+                        {issue.severity}
                       </span>
                     </div>
-                    <p className="text-[10px] text-[#57606a] dark:text-[#8b949e] leading-relaxed italic mt-0.5 font-sans">
-                      {issue.explanation}
-                    </p>
-                  </div>
 
-                  {/* Action Row: Apply + Ignore */}
-                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#d0d7de]/30 dark:border-[#30363d]/30 mt-1">
-                    <button
-                      onClick={() => handleIgnoreIssue(issue)}
-                      type="button"
-                      className="px-2 py-1 bg-transparent hover:bg-[#eaeef2] dark:hover:bg-[#30363d]/40 text-[#57606a] dark:text-[#8b949e] text-[10px] font-bold rounded-md transition-all cursor-pointer"
-                    >
-                      Ignore
-                    </button>
-                    <button
-                      onClick={() => applySingleGrammarSuggestion(issue)}
-                      type="button"
-                      className="px-2.5 py-1 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[10px] font-bold rounded-md transition-all cursor-pointer"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                    {/* Issue visual correction: flagged word vs suggestion */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="line-through text-[#f85149] select-all bg-[#f85149]/5 px-1 py-0.25 rounded-sm font-medium">
+                          {issue.original}
+                        </span>
+                        <ChevronRight className="w-3.5 h-3.5 text-[#57606a] dark:text-[#8b949e] shrink-0" />
+                        <span className="text-[#3fb950] font-bold select-all bg-[#3fb950]/5 px-1 py-0.25 rounded-sm">
+                          {issue.suggestion}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-[#57606a] dark:text-[#8b949e] leading-relaxed italic mt-0.5 font-sans">
+                        {issue.explanation}
+                      </p>
+                    </div>
+
+                    {/* Action Row: Apply + Ignore */}
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#d0d7de]/30 dark:border-[#30363d]/30 mt-1">
+                      <button
+                        onClick={() => handleIgnoreIssue(issue)}
+                        type="button"
+                        className="px-2 py-1 bg-transparent hover:bg-[#eaeef2] dark:hover:bg-[#30363d]/40 text-[#57606a] dark:text-[#8b949e] text-[10px] font-bold rounded-md transition-all cursor-pointer"
+                      >
+                        Ignore
+                      </button>
+                      <button
+                        onClick={() => applySingleGrammarSuggestion(issue)}
+                        type="button"
+                        className="px-2.5 py-1 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[10px] font-bold rounded-md transition-all cursor-pointer"
+                      >
+                        Apply Fix
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
 
             {grammarSuggestions.length === 0 && (
               <div className="text-center py-8 text-[#57606a] dark:text-[#8b949e] h-full flex flex-col items-center justify-center">
                 {isGrammarChecking ? (
                   <>
                     <RefreshCw className="w-6 h-6 text-[#58a6ff] animate-spin mb-2" />
-                    <span className="text-xs font-mono">Running LLM validation...</span>
+                    <span className="text-xs font-mono">Scanning basic grammar...</span>
                   </>
                 ) : (
-                  <>
-                    <CheckSquare className="w-6 h-6 text-[#3fb950] mb-2" />
-                    <span className="text-xs font-sans italic font-medium text-[#3fb950]">Perfect grammar detected!</span>
-                    <span className="text-[10px] font-sans text-center px-4 mt-1 leading-relaxed">
-                      Your text will automatically update with underlines when issues are found.
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col items-center"
+                  >
+                    <CheckSquare className="w-7 h-7 text-[#3fb950] mb-2" />
+                    <span className="text-xs font-sans italic font-bold text-[#3fb950]">Basic grammar is clean!</span>
+                    <span className="text-[10px] font-sans text-center px-4 mt-1 leading-relaxed text-[#57606a] dark:text-[#8b949e]">
+                      No capitalization, punctuation, or basic phrasing errors found.
                     </span>
-                  </>
+                  </motion.div>
                 )}
               </div>
             )}

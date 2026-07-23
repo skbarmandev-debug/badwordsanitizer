@@ -583,27 +583,6 @@ export function analyzeClientText(text: string): GrammarIssue[] {
       });
       continue;
     }
-
-    // Check 3: General dictionary lookup for spellchecking
-    // Skip proper nouns (capitalized words not at sentence start) or tech terms
-    const isCapitalized = rawWord[0] === rawWord[0].toUpperCase();
-    const isAllUpper = rawWord === rawWord.toUpperCase();
-
-    if (!isAllUpper && !ENGLISH_DICTIONARY.has(lowerWord) && !ENGLISH_DICTIONARY.has(rawWord)) {
-      // Find top replacement suggestions
-      const suggestions = getSpellingSuggestions(rawWord);
-      if (suggestions.length > 0) {
-        addIssue({
-          type: "Spelling Mistake",
-          original: rawWord,
-          suggestion: suggestions[0],
-          explanation: `Misspelled word '${rawWord}'. Did you mean '${suggestions[0]}'?`,
-          severity: "spelling",
-          startIndex,
-          endIndex
-        });
-      }
-    }
   }
 
   // Sort issues strictly by startIndex ascending
