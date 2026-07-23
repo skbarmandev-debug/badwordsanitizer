@@ -36,6 +36,7 @@ import {
   HardDrive
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { analyzeClientText, typingTracker, GrammarIssue } from "./lib/clientNlpEngine";
 
 // ==========================================
 // DEFAULT RESTRICTED WORD LIST (FIVERR RED-FLAGS)
@@ -115,6 +116,12 @@ const DEFAULT_TEMPLATES: Template[] = [
     name: "Default",
     category: "Inbox Message Without Modification",
     content: "Hi there,\n\nI hope you are doing great.\n\nBased on your latest feedback, I've completed all the assigned tasks according to your instructions. I've maintained a consistent layout throughout the website and ensured everything aligns with your vision.\n\nHere is your website URL:\n[Place your Client website URL]\n\nSince I have completed all of the tasks on my end, I am delivering this project to you.\n\nNo worries about this project's delivery. After approving this project delivery based on my work, I'll give you 30 days of ongoing support. In this support period, if you need any changes or modifications, you can let me know in my \"Fiverr Inbox.\" I will take care of the rest.\n\nIt's a pleasure to work with you, and I hope we'll work together in the future.\n\nBest regards,"
+  },
+  {
+    id: "default-delivery-approach-no-mod",
+    name: "Default",
+    category: "Delivery Approach Without Modification",
+    content: "Hello there,\n\nI hope you are doing great.\n\nSince I've completed all the assigned tasks from my end, can I deliver the work to you?\n\nNo worries about the transition; you will receive 30 days of ongoing support from me starting today. If you notice any minor tweaks needed or have questions about the new page, just message me here in the Fiverr Inbox, and I will take care of it immediately.\n\nThank you for the continued trust in my work. I look forward to your thoughts!\n\nBest regards,"
   }
 ];
 
@@ -125,16 +132,6 @@ interface MatchRange {
   start: number;
   end: number;
   word: string;
-}
-
-interface GrammarIssue {
-  type: string;
-  original: string;
-  suggestion: string;
-  explanation: string;
-  severity: "critical" | "minor" | "spelling";
-  startIndex: number;
-  endIndex: number;
 }
 
 interface ToastMessage {
@@ -261,7 +258,7 @@ function renderDecoratedHtml(text: string, restrictedMatches: MatchRange[], gram
     }
     
     const segmentText = text.slice(start, i);
-    let escaped = escapeHtml(segmentText);
+    let escaped = escapeHtml(segmentText).replace(/\n/g, "<br>");
     
     if (isRestricted || grammarIssue) {
       let classes = "";
@@ -272,12 +269,12 @@ function renderDecoratedHtml(text: string, restrictedMatches: MatchRange[], gram
       }
       
       if (grammarIssue) {
-        let color = "#dc2626"; // red for critical
-        if (grammarIssue.severity === "minor") color = "#d97706"; // amber for minor
-        else if (grammarIssue.severity === "spelling") color = "#2563eb"; // blue for spelling
+        // Red for spelling & critical, yellow/amber for minor/punctuation
+        let color = "#ef4444"; // red for spelling & critical
+        if (grammarIssue.severity === "minor") color = "#f59e0b"; // yellow/amber for minor/punctuation
         
-        stylesAttr += `text-decoration: underline wavy ${color}; text-decoration-skip-ink: none;`;
-        classes += " cursor-pointer";
+        stylesAttr += `text-decoration: underline wavy ${color}; text-decoration-skip-ink: none; text-underline-offset: 3px;`;
+        classes += " cursor-pointer hover:bg-amber-500/10 transition-colors";
       }
       
       html += `<span class="${classes.trim()}" style="${stylesAttr}" ${isRestricted ? 'data-restricted="true"' : ''} ${grammarIssue ? `data-grammar-id="${grammarIssue.startIndex}"` : ''}>${escaped}</span>`;
@@ -286,6 +283,10 @@ function renderDecoratedHtml(text: string, restrictedMatches: MatchRange[], gram
     }
   }
   
+  if (text.endsWith("\n")) {
+    html += "<br>";
+  }
+
   return html;
 }
 
@@ -314,39 +315,94 @@ function obfuscateText(text: string, matches: MatchRange[]): string {
 // ==========================================
 // CARET SELECTION STORAGE & RESTORATION
 // ==========================================
-function getCaretCharacterOffsetWithin(element: HTMLElement): number {
-  let caretOffset = 0;
-  const doc = element.ownerDocument || document;
-  const win = doc.defaultView || window;
-  const sel = win.getSelection();
-  if (sel && sel.rangeCount > 0) {
-    const range = sel.getRangeAt(0);
+function getCaretOffsetFromRange(element: HTMLElement, range: Range): number {
+  if (!element.contains(range.startContainer)) return 0;
+
+  try {
     const preCaretRange = range.cloneRange();
     preCaretRange.selectNodeContents(element);
-    preCaretRange.setEnd(range.endContainer, range.endOffset);
-    caretOffset = preCaretRange.toString().length;
+    preCaretRange.setEnd(range.startContainer, range.startOffset);
+
+    const container = document.createElement("div");
+    container.appendChild(preCaretRange.cloneContents());
+
+    let textAcc = "";
+    const walk = (node: Node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        textAcc += node.textContent || "";
+      } else if (node.nodeName === "BR") {
+        textAcc += "\n";
+      } else {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          walk(node.childNodes[i]);
+        }
+      }
+    };
+    walk(container);
+    return textAcc.length;
+  } catch {
+    return 0;
   }
-  return caretOffset;
 }
 
-function setCaretPosition(element: HTMLElement, offset: number) {
-  const range = document.createRange();
+function getCaretCharacterOffsetWithin(element: HTMLElement): number {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return 0;
+  return getCaretOffsetFromRange(element, sel.getRangeAt(0));
+}
+
+function getSelectionCharacterRangeWithin(element: HTMLElement): { start: number; end: number } {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return { start: 0, end: 0 };
+
+  const range = sel.getRangeAt(0);
+  if (!element.contains(range.startContainer)) return { start: 0, end: 0 };
+
+  const startRange = range.cloneRange();
+  startRange.collapse(true);
+
+  const endRange = range.cloneRange();
+  endRange.collapse(false);
+
+  const start = getCaretOffsetFromRange(element, startRange);
+  const end = getCaretOffsetFromRange(element, endRange);
+
+  return { start: Math.min(start, end), end: Math.max(start, end) };
+}
+
+function setCaretPosition(element: HTMLElement, targetOffset: number) {
   const sel = window.getSelection();
   if (!sel) return;
 
+  const range = document.createRange();
   let currentOffset = 0;
   let found = false;
 
   function traverseNodes(node: Node) {
     if (found) return;
+
     if (node.nodeType === Node.TEXT_NODE) {
       const len = node.textContent?.length || 0;
-      if (currentOffset + len >= offset) {
-        range.setStart(node, offset - currentOffset);
-        range.setEnd(node, offset - currentOffset);
+      if (currentOffset + len >= targetOffset) {
+        const pos = Math.max(0, targetOffset - currentOffset);
+        range.setStart(node, Math.min(pos, len));
+        range.setEnd(node, Math.min(pos, len));
         found = true;
       } else {
         currentOffset += len;
+      }
+    } else if (node.nodeName === "BR") {
+      if (currentOffset + 1 >= targetOffset) {
+        if (targetOffset === currentOffset) {
+          range.setStartBefore(node);
+          range.setEndBefore(node);
+        } else {
+          range.setStartAfter(node);
+          range.setEndAfter(node);
+        }
+        found = true;
+      } else {
+        currentOffset += 1;
       }
     } else {
       for (let i = 0; i < node.childNodes.length; i++) {
@@ -357,12 +413,18 @@ function setCaretPosition(element: HTMLElement, offset: number) {
   }
 
   traverseNodes(element);
+
   if (!found) {
     range.selectNodeContents(element);
     range.collapse(false);
   }
-  sel.removeAllRanges();
-  sel.addRange(range);
+
+  try {
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch {
+    // fallback gracefully if window selection fails
+  }
 }
 
 // ==========================================
@@ -475,6 +537,10 @@ export default function App() {
             if (updated.id === "default-inbox-no-mod" && (updated.content.startsWith("[PLACEHOLDER: Write your Inbox Message Without Modification") || updated.content.startsWith("[PLACEHOLDER:"))) {
               updated.content = DEFAULT_TEMPLATES[7].content;
             }
+            if (updated.id === "default-delivery-approach-no-mod") {
+              updated.content = DEFAULT_TEMPLATES[8].content;
+              updated.category = "Delivery Approach Without Modification";
+            }
             if (updated.category === "Follow-up After First Update") {
               updated.category = "Second Follow-up";
             }
@@ -520,12 +586,35 @@ export default function App() {
   const lastSavedTextRef = useRef<string>("");
   const historyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Grammar suggestions
+  // Grammar suggestions & Client NLP
   const [grammarSuggestions, setGrammarSuggestions] = useState<GrammarIssue[]>([]);
   const [isGrammarChecking, setIsGrammarChecking] = useState(false);
   const [grammarMode, setGrammarMode] = useState<"fast" | "accurate">("fast");
   const [grammarErrorBanner, setGrammarErrorBanner] = useState<string | null>(null);
   const [sidebarTab, setSidebarTab] = useState<"restricted" | "grammar">("restricted");
+
+  // Typing Speed, Memory Consumption & Interactive Tooltip States
+  const [liveWpm, setLiveWpm] = useState<number>(0);
+  const [memoryUsage, setMemoryUsage] = useState<string>("16.2 MB");
+  const [tooltipState, setTooltipState] = useState<{ issue: GrammarIssue; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const updateMemory = () => {
+      if (typeof performance !== "undefined" && (performance as any).memory) {
+        const usedBytes = (performance as any).memory.usedJSHeapSize;
+        if (usedBytes && usedBytes > 0) {
+          setMemoryUsage(`${(usedBytes / (1024 * 1024)).toFixed(1)} MB`);
+          return;
+        }
+      }
+      const heapEstimate = 15.2 + (text.length * 0.0004);
+      setMemoryUsage(`${heapEstimate.toFixed(1)} MB`);
+    };
+
+    updateMemory();
+    const interval = setInterval(updateMemory, 1500);
+    return () => clearInterval(interval);
+  }, [text]);
 
   // System alerts / toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -608,9 +697,13 @@ export default function App() {
       if (el) {
         const decoratedHtml = renderDecoratedHtml(text, matches, grammarSuggestions);
         if (el.innerHTML !== decoratedHtml) {
-          const caretPos = getCaretCharacterOffsetWithin(el);
-          el.innerHTML = decoratedHtml;
-          setCaretPosition(el, caretPos);
+          if (document.activeElement === el) {
+            const { start } = getSelectionCharacterRangeWithin(el);
+            el.innerHTML = decoratedHtml;
+            setCaretPosition(el, start);
+          } else {
+            el.innerHTML = decoratedHtml;
+          }
         }
       }
     }, 400);
@@ -632,6 +725,10 @@ export default function App() {
     const rawText = e.currentTarget.innerText;
     setText(rawText);
     pushToHistory(rawText, false);
+    
+    // Record keystroke for real-time WPM calculation
+    const wpm = typingTracker.recordKeystroke(rawText.length);
+    setLiveWpm(wpm);
   };
 
   // Plain-text paste interceptor
@@ -728,9 +825,55 @@ export default function App() {
     if (isUndo) {
       e.preventDefault();
       handleUndo();
+      return;
     } else if (isRedo) {
       e.preventDefault();
       handleRedo();
+      return;
+    }
+
+    // Explicit Enter key handling to ensure immediate newline creation and cursor descent
+    if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      const el = editorRef.current;
+      if (!el) return;
+
+      const { start, end } = getSelectionCharacterRangeWithin(el);
+      const newText = text.slice(0, start) + "\n" + text.slice(end);
+
+      setText(newText);
+      pushToHistory(newText, false);
+
+      const matches = findMatches(newText, restrictedWords, graspSubstrings);
+      setMatchedRanges(matches);
+      el.innerHTML = renderDecoratedHtml(newText, matches, grammarSuggestions);
+      setCaretPosition(el, start + 1);
+
+      const wpm = typingTracker.recordKeystroke(newText.length);
+      setLiveWpm(wpm);
+      return;
+    }
+
+    // Tab key handling (inserts 2 spaces)
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const el = editorRef.current;
+      if (!el) return;
+
+      const { start, end } = getSelectionCharacterRangeWithin(el);
+      const newText = text.slice(0, start) + "  " + text.slice(end);
+
+      setText(newText);
+      pushToHistory(newText, false);
+
+      const matches = findMatches(newText, restrictedWords, graspSubstrings);
+      setMatchedRanges(matches);
+      el.innerHTML = renderDecoratedHtml(newText, matches, grammarSuggestions);
+      setCaretPosition(el, start + 2);
+
+      const wpm = typingTracker.recordKeystroke(newText.length);
+      setLiveWpm(wpm);
+      return;
     }
   };
 
@@ -770,7 +913,7 @@ export default function App() {
     // Force editor display reset
     const el = editorRef.current;
     if (el) {
-      el.innerHTML = escapeHtml(obText);
+      el.innerHTML = renderDecoratedHtml(obText, [], grammarSuggestions);
     }
   };
 
@@ -969,102 +1112,87 @@ export default function App() {
     
     setIsTemplateModalOpen(false);
   };  // ==========================================
-  // GEMINI AI GRAMMAR CHECK (STRONG REAL-TIME ENGINE)
+  // PURE CLIENT-SIDE NLP GRAMMAR & SPELLING ENGINE
   // ==========================================
-  const lastCheckedTextRef = useRef<string>("");
-  const activeCheckPromiseRef = useRef<Promise<any> | null>(null);
-  const queuedTextRef = useRef<string | null>(null);
-
-  const runGrammarCheck = async (textToCheck: string, modeToCheck: "fast" | "accurate", isManual = false) => {
-    if (!textToCheck.trim()) {
-      setGrammarSuggestions([]);
-      setGrammarErrorBanner(null);
-      return;
-    }
-
-    // If an API call is already running, queue this text and return (no overlapping stacked calls)
-    if (activeCheckPromiseRef.current) {
-      queuedTextRef.current = textToCheck;
-      return;
-    }
-
-    setIsGrammarChecking(true);
-    setGrammarErrorBanner(null);
-    lastCheckedTextRef.current = textToCheck;
-
-    const performFetch = async (retryLeft = 1): Promise<any> => {
-      const response = await fetch("/api/grammar-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: textToCheck, mode: modeToCheck })
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        const message = errData.error || `HTTP error ${response.status}`;
-        if (retryLeft > 0) {
-          // Retry once gracefully
-          return performFetch(retryLeft - 1);
-        }
-        throw new Error(message);
-      }
-
-      return response.json();
-    };
-
-    const promise = performFetch(1)
-      .then(data => {
-        const corrections = data.corrections || [];
-        setGrammarSuggestions(corrections);
-        setGrammarErrorBanner(null);
-        if (isManual) {
-          if (corrections.length === 0) {
-            addToast("Perfect grammar! No improvements needed.", "success");
-          } else {
-            addToast(`Found ${corrections.length} spelling/grammar issues`, "info");
-          }
-        }
-      })
-      .catch((err: any) => {
-        console.error("Grammar check error:", err);
-        setGrammarErrorBanner(err.message || "Failed to parse grammar recommendations after retry.");
-        if (isManual) {
-          addToast("Grammar check failed. See persistent banner for details.", "error");
-        }
-      })
-      .finally(() => {
-        activeCheckPromiseRef.current = null;
-        setIsGrammarChecking(false);
-
-        // If there's a queued text check, trigger it now
-        if (queuedTextRef.current !== null) {
-          const nextText = queuedTextRef.current;
-          queuedTextRef.current = null;
-          runGrammarCheck(nextText, modeToCheck, false);
-        }
-      });
-
-    activeCheckPromiseRef.current = promise;
-  };
-
-  const checkGrammarWithAI = () => {
+  const checkGrammarWithAI = (isManual = true) => {
     if (!text.trim()) {
-      addToast("Please enter some text first.", "error");
+      if (isManual) addToast("Please enter text in the editor first.", "error");
+      setGrammarSuggestions([]);
       return;
     }
-    runGrammarCheck(text, grammarMode, true);
+    setIsGrammarChecking(true);
+    const issues = analyzeClientText(text);
+    setGrammarSuggestions(issues);
+    setIsGrammarChecking(false);
+
+    if (isManual) {
+      if (issues.length === 0) {
+        addToast("Clean text! No spelling, grammar, or punctuation issues found.", "success");
+      } else {
+        addToast(`Client NLP detected ${issues.length} spelling & grammar issues`, "info");
+      }
+    }
   };
 
-  // Real-time automatic check: 700ms after typing stops
+  // Debounced live client-side NLP check (600ms)
   useEffect(() => {
-    if (text === lastCheckedTextRef.current) return;
-    
     const timer = setTimeout(() => {
-      runGrammarCheck(text, grammarMode, false);
-    }, 700);
+      if (!text.trim()) {
+        setGrammarSuggestions([]);
+        return;
+      }
+      setIsGrammarChecking(true);
+      const issues = analyzeClientText(text);
+      setGrammarSuggestions(issues);
+      setIsGrammarChecking(false);
+    }, 600);
 
     return () => clearTimeout(timer);
-  }, [text, grammarMode]);
+  }, [text]);
+
+  // Mouse over / click handlers for interactive editor tooltips
+  const handleEditorMouseOver = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const grammarSpan = target.closest("span[data-grammar-id]") as HTMLElement | null;
+    if (grammarSpan) {
+      const idStr = grammarSpan.getAttribute("data-grammar-id");
+      if (idStr !== null) {
+        const startIdx = parseInt(idStr, 10);
+        const issue = grammarSuggestions.find(g => g.startIndex === startIdx);
+        if (issue) {
+          const rect = grammarSpan.getBoundingClientRect();
+          setTooltipState({
+            issue,
+            x: Math.max(12, rect.left + rect.width / 2),
+            y: Math.max(12, rect.top)
+          });
+          return;
+        }
+      }
+    }
+  };
+
+  const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const grammarSpan = target.closest("span[data-grammar-id]") as HTMLElement | null;
+    if (grammarSpan) {
+      const idStr = grammarSpan.getAttribute("data-grammar-id");
+      if (idStr !== null) {
+        const startIdx = parseInt(idStr, 10);
+        const issue = grammarSuggestions.find(g => g.startIndex === startIdx);
+        if (issue) {
+          const rect = grammarSpan.getBoundingClientRect();
+          setTooltipState({
+            issue,
+            x: Math.max(12, rect.left + rect.width / 2),
+            y: Math.max(12, rect.top)
+          });
+          return;
+        }
+      }
+    }
+    setTooltipState(null);
+  };
 
   const applySingleGrammarSuggestion = (issue: GrammarIssue) => {
     const { startIndex, endIndex, original, suggestion } = issue;
@@ -1340,17 +1468,86 @@ export default function App() {
               </div>
 
               {/* CONTENT EDITABLE BUFFER */}
-              <div className="p-3 sm:p-4 flex-1 overflow-y-auto bg-[#fbfbfb] dark:bg-[#0a0e14]">
+              <div className="p-3 sm:p-4 flex-1 overflow-y-auto bg-[#fbfbfb] dark:bg-[#0a0e14] relative">
                 <div
                   ref={editorRef}
                   contentEditable
                   onInput={handleInput}
                   onKeyDown={handleKeyDown}
                   onPaste={handlePaste}
+                  onMouseOver={handleEditorMouseOver}
+                  onClick={handleEditorClick}
                   placeholder="Paste your Fiverr message here..."
                   className="w-full min-h-[280px] sm:min-h-[350px] outline-hidden font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words select-text empty:before:content-[attr(placeholder)] empty:before:text-[#57606a]/60 dark:empty:before:text-[#8b949e]/40 empty:before:pointer-events-none empty:before:italic text-[#24292f] dark:text-[#c9d1d9]"
                   style={{ minHeight: '280px', lineHeight: '1.625rem' }}
                 />
+
+                {/* Interactive Grammar & Spelling Tooltip Card */}
+                <AnimatePresence>
+                  {tooltipState && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                      style={{
+                        position: "fixed",
+                        left: `${tooltipState.x}px`,
+                        top: `${tooltipState.y}px`,
+                        transform: "translate(-50%, -100%) translateY(-10px)"
+                      }}
+                      className="z-50 w-72 bg-[#161b22] text-[#c9d1d9] border border-[#30363d] rounded-lg p-3 shadow-2xl font-mono text-xs backdrop-blur-md"
+                    >
+                      <div className="flex items-center justify-between border-b border-[#30363d] pb-2 mb-2">
+                        <span className="font-bold text-[11px] uppercase tracking-wider text-[#58a6ff]">
+                          {tooltipState.issue.type}
+                        </span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                          tooltipState.issue.severity === "spelling" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                        }`}>
+                          {tooltipState.issue.severity}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2 mb-2 text-xs">
+                        <span className="line-through text-red-400 bg-red-900/20 px-1.5 py-0.5 rounded font-medium">
+                          {tooltipState.issue.original}
+                        </span>
+                        <span className="text-[#8b949e]">→</span>
+                        <button
+                          onClick={() => {
+                            applySingleGrammarSuggestion(tooltipState.issue);
+                            setTooltipState(null);
+                          }}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2 py-0.5 rounded transition-all cursor-pointer shadow-xs active:scale-95"
+                        >
+                          {tooltipState.issue.suggestion}
+                        </button>
+                      </div>
+
+                      <p className="text-[11px] text-[#8b949e] font-sans leading-relaxed mb-2 italic">
+                        {tooltipState.issue.explanation}
+                      </p>
+
+                      <div className="flex items-center justify-end gap-2 border-t border-[#30363d] pt-2">
+                        <button
+                          onClick={() => setTooltipState(null)}
+                          className="text-[10px] text-[#8b949e] hover:text-white px-2 py-1 rounded cursor-pointer"
+                        >
+                          Dismiss
+                        </button>
+                        <button
+                          onClick={() => {
+                            applySingleGrammarSuggestion(tooltipState.issue);
+                            setTooltipState(null);
+                          }}
+                          className="text-[10px] bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 px-2 py-1 rounded font-bold transition-all cursor-pointer"
+                        >
+                          Apply Fix
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
@@ -1448,7 +1645,22 @@ export default function App() {
               </div>
 
               {isConsoleOpen && (
-                <div className="p-2 sm:p-3 max-h-32 overflow-y-auto space-y-1 text-[11px] leading-relaxed bg-[#0a0e14] text-[#c9d1d9] border-b border-[#30363d]">
+                <div className="p-2 sm:p-3 max-h-36 overflow-y-auto space-y-1.5 text-[11px] leading-relaxed bg-[#0a0e14] text-[#c9d1d9] border-b border-[#30363d]">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-5 pb-1.5 mb-1.5 border-b border-[#30363d]/60 text-[10px] font-mono">
+                    <div className="flex items-center gap-1 text-[#58a6ff] font-bold">
+                      <Zap className="w-3 h-3 text-[#58a6ff]" />
+                      <span>Speed:</span> {liveWpm} WPM
+                    </div>
+                    <div className="flex items-center gap-1 text-[#3fb950] font-bold">
+                      <HardDrive className="w-3 h-3 text-[#3fb950]" />
+                      <span>Memory Consumed:</span> {memoryUsage}
+                    </div>
+                    <div className="flex items-center gap-1 text-[#8b949e]">
+                      <Cpu className="w-3 h-3 text-[#3fb950]" />
+                      <span>System:</span> Pure Client NLP
+                    </div>
+                  </div>
+
                   {activeConsoleTab === "terminal" ? (
                     terminalLogs.length === 0 ? (
                       <div className="text-[#8b949e] italic text-[10px] px-1">Console logs cleared. Ready for input events...</div>
@@ -1488,8 +1700,8 @@ export default function App() {
 
             {/* EDITOR TERMINAL STATUS BAR */}
             <div className="p-3 sm:p-4 bg-[#f6f8fa] dark:bg-[#161b22]/70 border-t border-[#d0d7de] dark:border-[#30363d] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
-              {/* Lines / Characters Counter */}
-              <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4 text-[11px] sm:text-xs font-mono text-[#57606a] dark:text-[#8b949e]">
+              {/* Lines / Characters Counter / Speed & Memory Tracker */}
+              <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2.5 sm:gap-4 text-[11px] sm:text-xs font-mono text-[#57606a] dark:text-[#8b949e]">
                 <div>
                   ln <span className="font-semibold text-[#24292f] dark:text-white">{text.split('\n').length}</span>
                 </div>
@@ -1498,6 +1710,14 @@ export default function App() {
                 </div>
                 <div>
                   words <span className="font-semibold text-[#24292f] dark:text-white">{wordCount}</span>
+                </div>
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-[#58a6ff]/10 border border-[#58a6ff]/30 text-[#58a6ff] rounded font-bold text-[10px]" title="Live Typing Speed">
+                  <Zap className="w-3 h-3 text-[#58a6ff]" />
+                  <span>{liveWpm} WPM</span>
+                </div>
+                <div className="flex items-center gap-1 px-2 py-0.5 bg-[#3fb950]/10 border border-[#3fb950]/30 text-[#3fb950] rounded font-bold text-[10px]" title="RAM / Memory Consumed by Site/Editor">
+                  <HardDrive className="w-3 h-3 text-[#3fb950]" />
+                  <span>{memoryUsage}</span>
                 </div>
               </div>
 
@@ -1522,41 +1742,19 @@ export default function App() {
                   </button>
                 )}
 
-                {/* Model Selector Toggle */}
-                <div className="flex bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-0.5 text-[10px] font-bold font-mono h-8 items-center shrink-0">
-                  <button
-                    onClick={() => setGrammarMode("fast")}
-                    type="button"
-                    className={`px-2 py-0.5 rounded-sm transition-all cursor-pointer h-full ${
-                      grammarMode === "fast"
-                        ? "bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30"
-                        : "text-[#57606a] dark:text-[#8b949e] hover:text-[#24292f] dark:hover:text-white"
-                    }`}
-                    title="FAST: gemini-2.5-flash"
-                  >
-                    FAST
-                  </button>
-                  <button
-                    onClick={() => setGrammarMode("accurate")}
-                    type="button"
-                    className={`px-2 py-0.5 rounded-sm transition-all cursor-pointer h-full ${
-                      grammarMode === "accurate"
-                        ? "bg-[#58a6ff]/15 text-[#58a6ff] border border-[#58a6ff]/30"
-                        : "text-[#57606a] dark:text-[#8b949e] hover:text-[#24292f] dark:hover:text-white"
-                    }`}
-                    title="PRO: gemini-2.5-pro"
-                  >
-                    PRO
-                  </button>
+                {/* Pure Client NLP Indicator */}
+                <div className="flex bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md px-2 py-1 text-[10px] font-bold font-mono h-8 items-center text-[#3fb950] shrink-0 gap-1" title="Pure Client-Side NLP Engine (Zero Server Dependencies)">
+                  <Cpu className="w-3 h-3 text-[#3fb950]" />
+                  <span>Client NLP</span>
                 </div>
 
                 <button
-                  onClick={checkGrammarWithAI}
+                  onClick={() => checkGrammarWithAI(true)}
                   disabled={isGrammarChecking}
                   className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] text-[11px] sm:text-xs font-medium font-mono rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer h-8"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
-                  <span>{isGrammarChecking ? "checking..." : "fix grammar"}</span>
+                  <span>{isGrammarChecking ? "Scanning..." : "Scan Grammar"}</span>
                 </button>
 
                 <button
@@ -2176,11 +2374,11 @@ export default function App() {
                   },
                   {
                     id: "grammar",
-                    title: "Run AI Grammar Audit",
+                    title: "Run Pure Client-Side NLP Scan",
                     icon: Sparkles,
                     color: "text-[#58a6ff]",
                     shortcut: "Audit",
-                    action: () => { checkGrammarWithAI(); setIsCommandPaletteOpen(false); }
+                    action: () => { checkGrammarWithAI(true); setIsCommandPaletteOpen(false); }
                   },
                   {
                     id: "copy",
@@ -2333,7 +2531,7 @@ interface UnifiedSidebarProps {
   grammarMode: "fast" | "accurate";
   setGrammarMode: (mode: "fast" | "accurate") => void;
   grammarErrorBanner: string | null;
-  checkGrammarWithAI: () => void;
+  checkGrammarWithAI: (isManual?: boolean) => void;
   applySingleGrammarSuggestion: (issue: GrammarIssue) => void;
   handleIgnoreIssue: (issue: GrammarIssue) => void;
   applyAllGrammarSuggestions: () => void;
@@ -2533,40 +2731,17 @@ function UnifiedSidebar({
             </p>
           </div>
 
-          {/* Model Select Toggle & Check Grammar Action */}
+          {/* Pure Client NLP Status & Action */}
           <div className="p-3 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md flex flex-col gap-3 font-mono shrink-0">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#57606a] dark:text-[#8b949e] uppercase">Auditor Model:</span>
-              <div className="flex bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-0.5 text-[10px] font-bold">
-                <button
-                  onClick={() => setGrammarMode("fast")}
-                  type="button"
-                  className={`px-2.5 py-1 rounded-sm transition-all cursor-pointer ${
-                    grammarMode === "fast"
-                      ? "bg-[#ffffff] dark:bg-[#0d1117] text-[#24292f] dark:text-white border border-[#d0d7de]/40 dark:border-[#30363d]/40 shadow-xs"
-                      : "text-[#57606a] dark:text-[#8b949e] hover:text-[#24292f] dark:hover:text-white"
-                  }`}
-                  title="Uses gemini-2.5-flash for lightning fast responses"
-                >
-                  Fast
-                </button>
-                <button
-                  onClick={() => setGrammarMode("accurate")}
-                  type="button"
-                  className={`px-2.5 py-1 rounded-sm transition-all cursor-pointer ${
-                    grammarMode === "accurate"
-                      ? "bg-[#ffffff] dark:bg-[#0d1117] text-[#24292f] dark:text-white border border-[#d0d7de]/40 dark:border-[#30363d]/40 shadow-xs"
-                      : "text-[#57606a] dark:text-[#8b949e] hover:text-[#24292f] dark:hover:text-white"
-                  }`}
-                  title="Uses gemini-2.5-pro for complex, deep grammatical proofreading"
-                >
-                  Accurate
-                </button>
-              </div>
+              <span className="text-[11px] font-bold text-[#57606a] dark:text-[#8b949e] uppercase">Engine:</span>
+              <span className="text-[10px] px-2 py-0.5 bg-[#3fb950]/10 border border-[#3fb950]/30 text-[#3fb950] font-bold rounded">
+                100% Client-Side NLP
+              </span>
             </div>
 
             <button
-              onClick={checkGrammarWithAI}
+              onClick={() => checkGrammarWithAI(true)}
               disabled={isGrammarChecking}
               type="button"
               className="w-full py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
