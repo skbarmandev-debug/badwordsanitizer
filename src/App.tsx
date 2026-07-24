@@ -161,14 +161,16 @@ function findMatches(text: string, wordList: string[], graspSubstrings: boolean 
 
   for (const word of sortedWords) {
     const escaped = escapeRegExp(word);
-    // If graspSubstrings is true, match anywhere in the string. 
-    // If false, require a non-alphanumeric boundary on both sides of the word.
     const regex = graspSubstrings
       ? new RegExp(escaped, 'gi')
       : new RegExp(`(?<=^|[^a-zA-Z0-9])${escaped}(?=$|[^a-zA-Z0-9])`, 'gi');
     
     let match;
     while ((match = regex.exec(text)) !== null) {
+      if (match[0].length === 0) {
+        regex.lastIndex++;
+        continue;
+      }
       const start = match.index;
       const end = start + match[0].length;
       
@@ -196,6 +198,28 @@ function findMatches(text: string, wordList: string[], graspSubstrings: boolean 
 
   // Sort by start index ascending for chronological text parsing
   return matches.sort((a, b) => a.start - b.start);
+}
+
+// Safely extract deterministic plain text from contentEditable DOM
+function getCleanTextFromElement(el: HTMLElement): string {
+  let text = "";
+  const walk = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      text += node.textContent || "";
+    } else if (node.nodeName === "BR") {
+      text += "\n";
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const isBlock = node.nodeName === "DIV" || node.nodeName === "P";
+      if (isBlock && text.length > 0 && !text.endsWith("\n")) {
+        text += "\n";
+      }
+      for (let i = 0; i < node.childNodes.length; i++) {
+        walk(node.childNodes[i]);
+      }
+    }
+  };
+  walk(el);
+  return text;
 }
 
 // Safely escape raw string to HTML tags
@@ -252,7 +276,8 @@ function renderDecoratedHtml(text: string, restrictedMatches: MatchRange[], _gra
       html += escaped;
     }
   }
-  
+
+  // Trailing newline in contentEditable requires an extra <br> so the browser renders the empty line
   if (text.endsWith("\n")) {
     html += "<br>";
   }
@@ -568,6 +593,11 @@ export default function App() {
   const [memoryUsage, setMemoryUsage] = useState<string>("16.2 MB");
   const [tooltipState, setTooltipState] = useState<{ issue: GrammarIssue; x: number; y: number } | null>(null);
 
+  const textRef = useRef(text);
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
+
   useEffect(() => {
     const updateMemory = () => {
       if (typeof performance !== "undefined" && (performance as any).memory) {
@@ -577,14 +607,14 @@ export default function App() {
           return;
         }
       }
-      const heapEstimate = 15.2 + (text.length * 0.0004);
+      const heapEstimate = 15.2 + (textRef.current.length * 0.0004);
       setMemoryUsage(`${heapEstimate.toFixed(1)} MB`);
     };
 
     updateMemory();
-    const interval = setInterval(updateMemory, 1500);
+    const interval = setInterval(updateMemory, 2000);
     return () => clearInterval(interval);
-  }, [text]);
+  }, []);
 
   // System alerts / toasts
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -692,7 +722,7 @@ export default function App() {
   // INPUT & SHORTCUT HANDLING
   // ==========================================
   const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const rawText = e.currentTarget.innerText;
+    const rawText = getCleanTextFromElement(e.currentTarget);
     setText(rawText);
     pushToHistory(rawText, false);
     
@@ -705,26 +735,19 @@ export default function App() {
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
     e.preventDefault();
     const rawText = e.clipboardData.getData("text/plain");
-    
-    const selection = window.getSelection();
-    if (!selection || !selection.rangeCount) return;
-    
-    const range = selection.getRangeAt(0);
-    range.deleteContents();
-    
-    const textNode = document.createTextNode(rawText);
-    range.insertNode(textNode);
-    
-    range.setStartAfter(textNode);
-    range.setEndAfter(textNode);
-    selection.removeAllRanges();
-    selection.addRange(range);
-    
-    if (editorRef.current) {
-      const updatedText = editorRef.current.innerText;
-      setText(updatedText);
-      pushToHistory(updatedText, true);
-    }
+    const el = editorRef.current;
+    if (!el) return;
+
+    const { start, end } = getSelectionCharacterRangeWithin(el);
+    const updatedText = text.slice(0, start) + rawText + text.slice(end);
+
+    setText(updatedText);
+    pushToHistory(updatedText, true);
+
+    const matches = findMatches(updatedText, restrictedWords, graspSubstrings);
+    setMatchedRanges(matches);
+    el.innerHTML = renderDecoratedHtml(updatedText, matches, grammarSuggestions);
+    setCaretPosition(el, start + rawText.length);
   };
 
   // History management
