@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Shield, 
   Sparkles, 
@@ -200,91 +200,6 @@ function findMatches(text: string, wordList: string[], graspSubstrings: boolean 
   return matches.sort((a, b) => a.start - b.start);
 }
 
-// Safely extract deterministic plain text from contentEditable DOM
-function getCleanTextFromElement(el: HTMLElement): string {
-  let text = "";
-  const walk = (node: Node) => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      text += node.textContent || "";
-    } else if (node.nodeName === "BR") {
-      text += "\n";
-    } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const isBlock = node.nodeName === "DIV" || node.nodeName === "P";
-      if (isBlock && text.length > 0 && !text.endsWith("\n")) {
-        text += "\n";
-      }
-      for (let i = 0; i < node.childNodes.length; i++) {
-        walk(node.childNodes[i]);
-      }
-    }
-  };
-  walk(el);
-  return text;
-}
-
-// Safely escape raw string to HTML tags
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// Highlight restricted match segments in the editor buffer
-function renderDecoratedHtml(text: string, restrictedMatches: MatchRange[], _grammarIssues?: GrammarIssue[]): string {
-  if (text.length === 0) return "";
-  
-  const styles: {
-    char: string;
-    restricted: boolean;
-  }[] = Array.from({ length: text.length }, (_, i) => ({
-    char: text[i],
-    restricted: false,
-  }));
-
-  // Apply restricted matches
-  for (const m of restrictedMatches) {
-    for (let i = m.start; i < m.end; i++) {
-      if (i >= 0 && i < styles.length) {
-        styles[i].restricted = true;
-      }
-    }
-  }
-
-  let html = "";
-  let i = 0;
-  while (i < styles.length) {
-    const start = i;
-    const isRestricted = styles[start].restricted;
-    
-    while (
-      i < styles.length && 
-      styles[i].restricted === isRestricted
-    ) {
-      i++;
-    }
-    
-    const segmentText = text.slice(start, i);
-    let escaped = escapeHtml(segmentText).replace(/\n/g, "<br>");
-    
-    if (isRestricted) {
-      const classes = "bg-[rgba(240,136,62,0.18)] text-[#f0883e] font-mono font-medium px-0.5 rounded-[3px] border-b border-[#f0883e]/80";
-      html += `<span class="${classes}" data-restricted="true">${escaped}</span>`;
-    } else {
-      html += escaped;
-    }
-  }
-
-  // Trailing newline in contentEditable requires an extra <br> so the browser renders the empty line
-  if (text.endsWith("\n")) {
-    html += "<br>";
-  }
-
-  return html;
-}
-
 // Insert "-" between every single letter of each word in a string, preserving spaces
 function obfuscateWordOrPhrase(wordOrPhrase: string): string {
   return wordOrPhrase
@@ -305,121 +220,6 @@ function obfuscateText(text: string, matches: MatchRange[]): string {
   }
   
   return newText;
-}
-
-// ==========================================
-// CARET SELECTION STORAGE & RESTORATION
-// ==========================================
-function getCaretOffsetFromRange(element: HTMLElement, range: Range): number {
-  if (!element.contains(range.startContainer)) return 0;
-
-  try {
-    const preCaretRange = range.cloneRange();
-    preCaretRange.selectNodeContents(element);
-    preCaretRange.setEnd(range.startContainer, range.startOffset);
-
-    const container = document.createElement("div");
-    container.appendChild(preCaretRange.cloneContents());
-
-    let textAcc = "";
-    const walk = (node: Node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        textAcc += node.textContent || "";
-      } else if (node.nodeName === "BR") {
-        textAcc += "\n";
-      } else {
-        for (let i = 0; i < node.childNodes.length; i++) {
-          walk(node.childNodes[i]);
-        }
-      }
-    };
-    walk(container);
-    return textAcc.length;
-  } catch {
-    return 0;
-  }
-}
-
-function getCaretCharacterOffsetWithin(element: HTMLElement): number {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return 0;
-  return getCaretOffsetFromRange(element, sel.getRangeAt(0));
-}
-
-function getSelectionCharacterRangeWithin(element: HTMLElement): { start: number; end: number } {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return { start: 0, end: 0 };
-
-  const range = sel.getRangeAt(0);
-  if (!element.contains(range.startContainer)) return { start: 0, end: 0 };
-
-  const startRange = range.cloneRange();
-  startRange.collapse(true);
-
-  const endRange = range.cloneRange();
-  endRange.collapse(false);
-
-  const start = getCaretOffsetFromRange(element, startRange);
-  const end = getCaretOffsetFromRange(element, endRange);
-
-  return { start: Math.min(start, end), end: Math.max(start, end) };
-}
-
-function setCaretPosition(element: HTMLElement, targetOffset: number) {
-  const sel = window.getSelection();
-  if (!sel) return;
-
-  const range = document.createRange();
-  let currentOffset = 0;
-  let found = false;
-
-  function traverseNodes(node: Node) {
-    if (found) return;
-
-    if (node.nodeType === Node.TEXT_NODE) {
-      const len = node.textContent?.length || 0;
-      if (currentOffset + len >= targetOffset) {
-        const pos = Math.max(0, targetOffset - currentOffset);
-        range.setStart(node, Math.min(pos, len));
-        range.setEnd(node, Math.min(pos, len));
-        found = true;
-      } else {
-        currentOffset += len;
-      }
-    } else if (node.nodeName === "BR") {
-      if (currentOffset + 1 >= targetOffset) {
-        if (targetOffset === currentOffset) {
-          range.setStartBefore(node);
-          range.setEndBefore(node);
-        } else {
-          range.setStartAfter(node);
-          range.setEndAfter(node);
-        }
-        found = true;
-      } else {
-        currentOffset += 1;
-      }
-    } else {
-      for (let i = 0; i < node.childNodes.length; i++) {
-        traverseNodes(node.childNodes[i]);
-        if (found) break;
-      }
-    }
-  }
-
-  traverseNodes(element);
-
-  if (!found) {
-    range.selectNodeContents(element);
-    range.collapse(false);
-  }
-
-  try {
-    sel.removeAllRanges();
-    sel.addRange(range);
-  } catch {
-    // fallback gracefully if window selection fails
-  }
 }
 
 // ==========================================
@@ -448,7 +248,6 @@ export default function App() {
 
   // Main text state
   const [text, setText] = useState<string>("");
-  const [matchedRanges, setMatchedRanges] = useState<MatchRange[]>([]);
   const [obfuscatedFeedback, setObfuscatedFeedback] = useState<string | null>(null);
   
   // Restricted words state
@@ -620,8 +419,52 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   // DOM Refs
-  const editorRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const gutterRef = useRef<HTMLDivElement>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Compute matches & highlighted text with zero-latency memoization
+  const matchedRanges = useMemo(() => {
+    return findMatches(text, restrictedWords, graspSubstrings);
+  }, [text, restrictedWords, graspSubstrings]);
+
+  const highlightedContent = useMemo(() => {
+    if (!text) return null;
+    if (matchedRanges.length === 0) {
+      return text.endsWith("\n") ? text + " " : text;
+    }
+
+    const elements: React.ReactNode[] = [];
+    let lastIndex = 0;
+
+    for (let i = 0; i < matchedRanges.length; i++) {
+      const match = matchedRanges[i];
+      if (match.start > lastIndex) {
+        elements.push(text.slice(lastIndex, match.start));
+      }
+      const word = text.slice(match.start, match.end);
+      elements.push(
+        <mark
+          key={`${match.start}-${i}`}
+          className="bg-[rgba(240,136,62,0.22)] dark:bg-[rgba(240,136,62,0.35)] text-transparent border-b-2 border-[#f0883e] font-semibold rounded-[2px]"
+        >
+          {word}
+        </mark>
+      );
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < text.length) {
+      elements.push(text.slice(lastIndex));
+    }
+
+    if (text.endsWith("\n")) {
+      elements.push(" ");
+    }
+
+    return elements;
+  }, [text, matchedRanges]);
 
   // Developer Workstation UI States
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -685,33 +528,9 @@ export default function App() {
     }, 4000);
   };
 
-  // ==========================================
-  // DEBOUNCED LIVE SCANNING & HIGHLIGHTS
-  // ==========================================
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const matches = findMatches(text, restrictedWords, graspSubstrings);
-      setMatchedRanges(matches);
-
-      const el = editorRef.current;
-      if (el) {
-        const decoratedHtml = renderDecoratedHtml(text, matches, grammarSuggestions);
-        if (el.innerHTML !== decoratedHtml) {
-          if (document.activeElement === el) {
-            const { start } = getSelectionCharacterRangeWithin(el);
-            el.innerHTML = decoratedHtml;
-            setCaretPosition(el, start);
-          } else {
-            el.innerHTML = decoratedHtml;
-          }
-        }
-      }
-    }, 400);
-
-    return () => clearTimeout(timer);
-  }, [text, restrictedWords, graspSubstrings, grammarSuggestions]);
-
-  // Clear obfuscation banner if text changes
+  const updateEditorContentDirectly = (_rawText?: string) => {
+    // React state (setText) manages textarea value and backdrop overlay automatically
+  };
   useEffect(() => {
     if (obfuscatedFeedback && text.indexOf("-") === -1) {
       setObfuscatedFeedback(null);
@@ -721,33 +540,50 @@ export default function App() {
   // ==========================================
   // INPUT & SHORTCUT HANDLING
   // ==========================================
-  const handleInput = (e: React.FormEvent<HTMLDivElement>) => {
-    const rawText = getCleanTextFromElement(e.currentTarget);
-    setText(rawText);
-    pushToHistory(rawText, false);
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newText = e.target.value;
+    setText(newText);
+    pushToHistory(newText, false);
     
     // Record keystroke for real-time WPM calculation
-    const wpm = typingTracker.recordKeystroke(rawText.length);
+    const wpm = typingTracker.recordKeystroke(newText.length);
     setLiveWpm(wpm);
   };
 
-  // Plain-text paste interceptor
-  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    const rawText = e.clipboardData.getData("text/plain");
-    const el = editorRef.current;
-    if (!el) return;
+  const handleTextAreaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const target = e.currentTarget;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const newText = text.slice(0, start) + "  " + text.slice(end);
 
-    const { start, end } = getSelectionCharacterRangeWithin(el);
-    const updatedText = text.slice(0, start) + rawText + text.slice(end);
+      setText(newText);
+      pushToHistory(newText, false);
 
-    setText(updatedText);
-    pushToHistory(updatedText, true);
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
+        }
+      }, 0);
 
-    const matches = findMatches(updatedText, restrictedWords, graspSubstrings);
-    setMatchedRanges(matches);
-    el.innerHTML = renderDecoratedHtml(updatedText, matches, grammarSuggestions);
-    setCaretPosition(el, start + rawText.length);
+      const wpm = typingTracker.recordKeystroke(newText.length);
+      setLiveWpm(wpm);
+    }
+  };
+
+  const handleEditorScroll = () => {
+    if (textareaRef.current) {
+      const top = textareaRef.current.scrollTop;
+      const left = textareaRef.current.scrollLeft;
+      if (backdropRef.current) {
+        backdropRef.current.scrollTop = top;
+        backdropRef.current.scrollLeft = left;
+      }
+      if (gutterRef.current) {
+        gutterRef.current.scrollTop = top;
+      }
+    }
   };
 
   // History management
@@ -781,7 +617,6 @@ export default function App() {
       const targetText = history[targetIndex];
       setText(targetText);
       lastSavedTextRef.current = targetText;
-      updateEditorContentDirectly(targetText);
     } else {
       addToast("Nothing to undo", "info");
     }
@@ -794,79 +629,8 @@ export default function App() {
       const targetText = history[targetIndex];
       setText(targetText);
       lastSavedTextRef.current = targetText;
-      updateEditorContentDirectly(targetText);
     } else {
       addToast("Nothing to redo", "info");
-    }
-  };
-
-  const updateEditorContentDirectly = (rawText: string) => {
-    const el = editorRef.current;
-    if (el) {
-      const matches = findMatches(rawText, restrictedWords, graspSubstrings);
-      el.innerHTML = renderDecoratedHtml(rawText, matches, grammarSuggestions);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    const isUndo = (isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey;
-    const isRedo = 
-      ((isMac ? e.metaKey : e.ctrlKey) && e.key.toLowerCase() === 'y') ||
-      ((isMac ? e.metaKey : e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'z');
-
-    if (isUndo) {
-      e.preventDefault();
-      handleUndo();
-      return;
-    } else if (isRedo) {
-      e.preventDefault();
-      handleRedo();
-      return;
-    }
-
-    // Explicit Enter key handling to ensure immediate newline creation and cursor descent
-    if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-      e.preventDefault();
-      const el = editorRef.current;
-      if (!el) return;
-
-      const { start, end } = getSelectionCharacterRangeWithin(el);
-      const newText = text.slice(0, start) + "\n" + text.slice(end);
-
-      setText(newText);
-      pushToHistory(newText, false);
-
-      const matches = findMatches(newText, restrictedWords, graspSubstrings);
-      setMatchedRanges(matches);
-      el.innerHTML = renderDecoratedHtml(newText, matches, grammarSuggestions);
-      setCaretPosition(el, start + 1);
-
-      const wpm = typingTracker.recordKeystroke(newText.length);
-      setLiveWpm(wpm);
-      return;
-    }
-
-    // Tab key handling (inserts 2 spaces)
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const el = editorRef.current;
-      if (!el) return;
-
-      const { start, end } = getSelectionCharacterRangeWithin(el);
-      const newText = text.slice(0, start) + "  " + text.slice(end);
-
-      setText(newText);
-      pushToHistory(newText, false);
-
-      const matches = findMatches(newText, restrictedWords, graspSubstrings);
-      setMatchedRanges(matches);
-      el.innerHTML = renderDecoratedHtml(newText, matches, grammarSuggestions);
-      setCaretPosition(el, start + 2);
-
-      const wpm = typingTracker.recordKeystroke(newText.length);
-      setLiveWpm(wpm);
-      return;
     }
   };
 
@@ -874,15 +638,9 @@ export default function App() {
   // BUTTON ACTIONS
   // ==========================================
   const triggerManualDetect = () => {
-    const matches = findMatches(text, restrictedWords, graspSubstrings);
-    setMatchedRanges(matches);
-    const el = editorRef.current;
-    if (el) {
-      el.innerHTML = renderDecoratedHtml(text, matches, grammarSuggestions);
-    }
-    if (matches.length > 0) {
-      addToast(`Detected ${matches.length} restricted word(s)`, "info");
-      addLog(`Linter re-scan complete: ${matches.length} restricted token(s) flagged.`, "warn");
+    if (matchedRanges.length > 0) {
+      addToast(`Detected ${matchedRanges.length} restricted word(s)`, "info");
+      addLog(`Linter re-scan complete: ${matchedRanges.length} restricted token(s) flagged.`, "warn");
     } else {
       addToast("No restricted words detected!", "success");
       addLog("Linter re-scan complete: 0 restricted tokens detected. Clean buffer.", "success");
@@ -890,24 +648,17 @@ export default function App() {
   };
 
   const triggerObfuscation = () => {
-    const matches = findMatches(text, restrictedWords, graspSubstrings);
-    if (matches.length === 0) {
+    if (matchedRanges.length === 0) {
       addToast("No words to obfuscate.", "info");
       addLog("Obfuscate triggered: buffer clean, 0 terms to transform.", "info");
       return;
     }
-    const obText = obfuscateText(text, matches);
+    const obText = obfuscateText(text, matchedRanges);
     setText(obText);
     pushToHistory(obText, true);
-    setObfuscatedFeedback(`✅ ${matches.length} word(s) obfuscated`);
+    setObfuscatedFeedback(`✅ ${matchedRanges.length} word(s) obfuscated`);
     addToast("Restricted terms hyphenated successfully!", "success");
-    addLog(`Sanitizer transformed ${matches.length} flagged token(s) with hyphenation.`, "success");
-
-    // Force editor display reset
-    const el = editorRef.current;
-    if (el) {
-      el.innerHTML = renderDecoratedHtml(obText, [], grammarSuggestions);
-    }
+    addLog(`Sanitizer transformed ${matchedRanges.length} flagged token(s) with hyphenation.`, "success");
   };
 
   const handleCopy = () => {
@@ -1445,11 +1196,14 @@ export default function App() {
               </div>
             </div>
 
-            {/* THE CODE-EDITOR WORKSPACE (Line Numbers Gutter + contentEditable editor) */}
+            {/* THE CODE-EDITOR WORKSPACE (Line Numbers Gutter + High-Performance Overlay Textarea) */}
             <div className="flex flex-row flex-1 bg-[#fbfbfb] dark:bg-[#0a0e14] min-h-[280px] sm:min-h-[350px] overflow-hidden relative">
               
               {/* CODE LINE GUTTER (Non-selectable line counters) */}
-              <div className="select-none text-right pr-2.5 pl-2.5 pt-3 sm:pr-4 sm:pl-4 sm:pt-4 border-r border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117] shrink-0 font-mono text-[11px] sm:text-xs text-[#57606a] dark:text-[#8b949e] min-h-full">
+              <div 
+                ref={gutterRef}
+                className="select-none text-right pr-2.5 pl-2.5 pt-3 sm:pr-4 sm:pl-4 sm:pt-4 border-r border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117] shrink-0 font-mono text-[11px] sm:text-xs text-[#57606a] dark:text-[#8b949e] min-h-full overflow-hidden"
+              >
                 {Array.from({ length: Math.max(1, text.split('\n').length) }).map((_, i) => (
                   <div 
                     key={i} 
@@ -1461,19 +1215,29 @@ export default function App() {
                 ))}
               </div>
 
-              {/* CONTENT EDITABLE BUFFER */}
-              <div className="p-3 sm:p-4 flex-1 overflow-y-auto bg-[#fbfbfb] dark:bg-[#0a0e14] relative">
+              {/* EDITOR CONTAINER WITH SYNCHRONIZED BACKDROP + TEXTAREA */}
+              <div className="flex-1 relative min-h-[280px] sm:min-h-[350px] overflow-hidden bg-[#fbfbfb] dark:bg-[#0a0e14]">
+                {/* HIGHLIGHT BACKDROP LAYER */}
                 <div
-                  ref={editorRef}
-                  contentEditable
-                  onInput={handleInput}
-                  onKeyDown={handleKeyDown}
-                  onPaste={handlePaste}
-                  onMouseOver={handleEditorMouseOver}
-                  onClick={handleEditorClick}
+                  ref={backdropRef}
+                  aria-hidden="true"
+                  className="absolute inset-0 p-3 sm:p-4 font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words overflow-hidden pointer-events-none select-none text-transparent border-none"
+                  style={{ lineHeight: '1.625rem' }}
+                >
+                  {highlightedContent}
+                </div>
+
+                {/* FOREGROUND NATIVE TEXTAREA */}
+                <textarea
+                  ref={textareaRef}
+                  value={text}
+                  onChange={handleTextChange}
+                  onKeyDown={handleTextAreaKeyDown}
+                  onScroll={handleEditorScroll}
                   placeholder="Paste your Fiverr message here..."
-                  className="w-full min-h-[280px] sm:min-h-[350px] outline-hidden font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words select-text empty:before:content-[attr(placeholder)] empty:before:text-[#57606a]/60 dark:empty:before:text-[#8b949e]/40 empty:before:pointer-events-none empty:before:italic text-[#24292f] dark:text-[#c9d1d9]"
-                  style={{ minHeight: '280px', lineHeight: '1.625rem' }}
+                  className="absolute inset-0 w-full h-full p-3 sm:p-4 font-mono text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words bg-transparent text-[#24292f] dark:text-[#c9d1d9] resize-none outline-none border-none focus:ring-0 selection:bg-[#58a6ff]/30"
+                  style={{ lineHeight: '1.625rem' }}
+                  spellCheck={false}
                 />
 
                 {/* Interactive Grammar & Spelling Tooltip Card */}
