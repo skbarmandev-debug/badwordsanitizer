@@ -81,17 +81,4 @@ html.dark, html.dark body {
   background: #484f58;
 }
 
-/* Gutter alignment and styling */
-.editor-gutter-num {
-  font-family: var(--font-mono);
-  color: #484f58;
-  text-align: right;
-  user-select: none;
-}
-.dark .editor-gutter-num {
-  color: #484f58;
-}
-.light .editor-gutter-num {
-  color: #8c959f;
-}
 

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { 
   Shield, 
-  Sparkles, 
   Check, 
   Copy, 
   RotateCcw, 
@@ -17,7 +16,6 @@ import {
   FileText, 
   Save, 
   ChevronRight, 
-  CheckSquare, 
   AlertCircle,
   Menu,
   ChevronDown,
@@ -36,7 +34,7 @@ import {
   HardDrive
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { analyzeClientText, typingTracker, GrammarIssue } from "./lib/clientNlpEngine";
+import { typingTracker } from "./lib/typingSpeedTracker";
 import { createRestrictedMatcher, MatchRange } from "./lib/restrictedMatcher";
 
 // ==========================================
@@ -58,6 +56,15 @@ const DEFAULT_RESTRICTED_WORDS = [
   "phishing", "deepfake", "scam",
   "contact", "cancel the order", "scammer", "cancellation", "tip me", "report you", "buy", "account", "sell account", "exchange"
 ];
+
+const MAX_HIGHLIGHTED_MATCHES = 2000;
+const MAX_DISPLAYED_MATCHES = 200;
+
+function reportSlowStage(stage: string, durationMs: number, details: Record<string, number>) {
+  if (import.meta.env.DEV && durationMs >= 50) {
+    console.warn(`[Performance] ${stage} took ${durationMs.toFixed(1)} ms`, details);
+  }
+}
 
 // ==========================================
 // STARTER TEMPLATES (MIGRATED AND CATEGORIZED)
@@ -321,17 +328,9 @@ export default function App() {
   const lastSavedTextRef = useRef<string>("");
   const historyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Grammar suggestions & Client NLP
-  const [grammarSuggestions, setGrammarSuggestions] = useState<GrammarIssue[]>([]);
-  const [isGrammarChecking, setIsGrammarChecking] = useState(false);
-  const [grammarMode, setGrammarMode] = useState<"fast" | "accurate">("fast");
-  const [grammarErrorBanner, setGrammarErrorBanner] = useState<string | null>(null);
-  const [sidebarTab, setSidebarTab] = useState<"restricted" | "grammar">("restricted");
-
-  // Typing Speed, Memory Consumption & Interactive Tooltip States
+  // Typing Speed and Memory Consumption
   const [liveWpm, setLiveWpm] = useState<number>(0);
   const [memoryUsage, setMemoryUsage] = useState<string>("16.2 MB");
-  const [tooltipState, setTooltipState] = useState<{ issue: GrammarIssue; x: number; y: number } | null>(null);
 
   const textRef = useRef(text);
   useEffect(() => {
@@ -362,7 +361,6 @@ export default function App() {
   // DOM Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
-  const gutterRef = useRef<HTMLDivElement>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Compute matches & highlighted text with zero-latency memoization
@@ -370,18 +368,34 @@ export default function App() {
     () => createRestrictedMatcher(restrictedWords, graspSubstrings),
     [restrictedWords, graspSubstrings]
   );
-  const matchedRanges = useMemo(() => matcher(text), [matcher, text]);
+  const matchedRanges = useMemo(() => {
+    const startedAt = performance.now();
+    const result = matcher(text);
+    reportSlowStage("restricted word detection", performance.now() - startedAt, {
+      inputLength: text.length,
+      patterns: restrictedWords.length,
+      matches: result.length
+    });
+    return result;
+  }, [matcher, text, restrictedWords.length]);
 
   const highlightedContent = useMemo(() => {
+    const startedAt = performance.now();
     if (!text) return null;
     if (matchedRanges.length === 0) {
+      reportSlowStage("highlight preparation", performance.now() - startedAt, {
+        inputLength: text.length,
+        matches: 0,
+        highlightedMatches: 0
+      });
       return text.endsWith("\n") ? text + " " : text;
     }
 
     const elements: React.ReactNode[] = [];
     let lastIndex = 0;
 
-    for (let i = 0; i < matchedRanges.length; i++) {
+    const highlightCount = Math.min(matchedRanges.length, MAX_HIGHLIGHTED_MATCHES);
+    for (let i = 0; i < highlightCount; i++) {
       const match = matchedRanges[i];
       if (match.start > lastIndex) {
         elements.push(text.slice(lastIndex, match.start));
@@ -398,7 +412,9 @@ export default function App() {
       lastIndex = match.end;
     }
 
-    if (lastIndex < text.length) {
+    if (highlightCount < matchedRanges.length) {
+      elements.push(text.slice(lastIndex));
+    } else if (lastIndex < text.length) {
       elements.push(text.slice(lastIndex));
     }
 
@@ -406,6 +422,11 @@ export default function App() {
       elements.push(" ");
     }
 
+    reportSlowStage("highlight preparation", performance.now() - startedAt, {
+      inputLength: text.length,
+      matches: matchedRanges.length,
+      highlightedMatches: highlightCount
+    });
     return elements;
   }, [text, matchedRanges]);
 
@@ -522,9 +543,6 @@ export default function App() {
       if (backdropRef.current) {
         backdropRef.current.scrollTop = top;
         backdropRef.current.scrollLeft = left;
-      }
-      if (gutterRef.current) {
-        gutterRef.current.scrollTop = top;
       }
     }
   };
@@ -801,174 +819,15 @@ export default function App() {
     
     setIsTemplateModalOpen(false);
   };  // ==========================================
-  // PURE CLIENT-SIDE NLP GRAMMAR & SPELLING ENGINE
-  // ==========================================
-  const checkGrammarWithAI = (isManual = true) => {
-    if (!text.trim()) {
-      if (isManual) addToast("Please enter text in the editor first.", "error");
-      setGrammarSuggestions([]);
-      return;
-    }
-    setIsGrammarChecking(true);
-    const issues = analyzeClientText(text);
-    setGrammarSuggestions(issues);
-    setIsGrammarChecking(false);
-
-    if (isManual) {
-      if (issues.length === 0) {
-        addToast("Clean text! No spelling, grammar, or punctuation issues found.", "success");
-      } else {
-        addToast(`Client NLP detected ${issues.length} spelling & grammar issues`, "info");
-      }
-    }
-  };
-
-  // Debounced live client-side NLP check (600ms)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!text.trim()) {
-        setGrammarSuggestions([]);
-        return;
-      }
-      setIsGrammarChecking(true);
-      const issues = analyzeClientText(text);
-      setGrammarSuggestions(issues);
-      setIsGrammarChecking(false);
-    }, 600);
-
-    return () => clearTimeout(timer);
-  }, [text]);
-
-  // Mouse over / click handlers for interactive editor tooltips
-  const handleEditorMouseOver = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    const grammarSpan = target.closest("span[data-grammar-id]") as HTMLElement | null;
-    if (grammarSpan) {
-      const idStr = grammarSpan.getAttribute("data-grammar-id");
-      if (idStr !== null) {
-        const startIdx = parseInt(idStr, 10);
-        const issue = grammarSuggestions.find(g => g.startIndex === startIdx);
-        if (issue) {
-          const rect = grammarSpan.getBoundingClientRect();
-          setTooltipState({
-            issue,
-            x: Math.max(12, rect.left + rect.width / 2),
-            y: Math.max(12, rect.top)
-          });
-          return;
-        }
-      }
-    }
-  };
-
-  const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    const grammarSpan = target.closest("span[data-grammar-id]") as HTMLElement | null;
-    if (grammarSpan) {
-      const idStr = grammarSpan.getAttribute("data-grammar-id");
-      if (idStr !== null) {
-        const startIdx = parseInt(idStr, 10);
-        const issue = grammarSuggestions.find(g => g.startIndex === startIdx);
-        if (issue) {
-          const rect = grammarSpan.getBoundingClientRect();
-          setTooltipState({
-            issue,
-            x: Math.max(12, rect.left + rect.width / 2),
-            y: Math.max(12, rect.top)
-          });
-          return;
-        }
-      }
-    }
-    setTooltipState(null);
-  };
-
-  const applySingleGrammarSuggestion = (issue: GrammarIssue) => {
-    const { startIndex, endIndex, original, suggestion } = issue;
-    
-    // Safety check: verify if original word is still present at these exact offsets
-    if (text.slice(startIndex, endIndex) !== original) {
-      // Fallback: search for first occurrence if user edited around it
-      const fallbackIndex = text.indexOf(original);
-      if (fallbackIndex === -1) {
-        addToast("Could not locate original phrase to replace.", "error");
-        return;
-      }
-      const updatedText = text.slice(0, fallbackIndex) + suggestion + text.slice(fallbackIndex + original.length);
-      setText(updatedText);
-      pushToHistory(updatedText, true);
-      updateEditorContentDirectly(updatedText);
-      setGrammarSuggestions(prev => prev.filter(g => g !== issue));
-      addToast("Correction applied!", "success");
-      return;
-    }
-
-    const updatedText = text.slice(0, startIndex) + suggestion + text.slice(endIndex);
-    setText(updatedText);
-    pushToHistory(updatedText, true);
-    updateEditorContentDirectly(updatedText);
-    
-    // Shift other remaining suggestions' indices
-    const diff = suggestion.length - original.length;
-    setGrammarSuggestions(prev => 
-      prev
-        .filter(g => g !== issue)
-        .map(g => {
-          if (g.startIndex > startIndex) {
-            return {
-              ...g,
-              startIndex: g.startIndex + diff,
-              endIndex: g.endIndex + diff
-            };
-          }
-          return g;
-        })
-    );
-    addToast("Correction applied!", "success");
-  };
-
-  const applyAllGrammarSuggestions = () => {
-    if (grammarSuggestions.length === 0) return;
-    
-    // Replace right-to-left to avoid index shifts
-    const sortedIssues = [...grammarSuggestions].sort((a, b) => b.startIndex - a.startIndex);
-    
-    let updatedText = text;
-    let appliedCount = 0;
-    
-    for (const issue of sortedIssues) {
-      const { startIndex, endIndex, original, suggestion } = issue;
-      if (updatedText.slice(startIndex, endIndex) === original) {
-        updatedText = updatedText.slice(0, startIndex) + suggestion + updatedText.slice(endIndex);
-        appliedCount++;
-      } else {
-        const fallbackIndex = updatedText.lastIndexOf(original);
-        if (fallbackIndex !== -1) {
-          updatedText = updatedText.slice(0, fallbackIndex) + suggestion + updatedText.slice(fallbackIndex + original.length);
-          appliedCount++;
-        }
-      }
-    }
-    
-    if (appliedCount > 0) {
-      setText(updatedText);
-      pushToHistory(updatedText, true);
-      updateEditorContentDirectly(updatedText);
-      setGrammarSuggestions([]);
-      addToast(`Applied ${appliedCount} grammar corrections!`, "success");
-    } else {
-      addToast("No matching original phrases found to correct.", "error");
-    }
-  };
-
-  const handleIgnoreIssue = (issue: GrammarIssue) => {
-    setGrammarSuggestions(prev => prev.filter(g => g !== issue));
-    addToast("Grammar issue ignored", "info");
-  };
-
   // Word/char calculations
   const charCount = text.length;
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const flaggedWords = useMemo(() => {
+    const uniqueWords = new Set<string>();
+    for (const match of matchedRanges) uniqueWords.add(match.word.toLowerCase());
+    return [...uniqueWords];
+  }, [matchedRanges]);
+  const displayedMatchedRanges = matchedRanges.slice(0, MAX_DISPLAYED_MATCHES);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#ffffff] dark:bg-[#0d1117] text-[#24292f] dark:text-[#c9d1d9] font-sans selection:bg-[#58a6ff]/30 transition-colors duration-200">
@@ -1140,25 +999,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* THE CODE-EDITOR WORKSPACE (Line Numbers Gutter + High-Performance Overlay Textarea) */}
-            <div className="flex flex-row flex-1 bg-[#fbfbfb] dark:bg-[#0a0e14] min-h-[280px] sm:min-h-[350px] overflow-hidden relative">
-              
-              {/* CODE LINE GUTTER (Non-selectable line counters) */}
-              <div 
-                ref={gutterRef}
-                className="select-none text-right pr-2.5 pl-2.5 pt-3 sm:pr-4 sm:pl-4 sm:pt-4 border-r border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117] shrink-0 font-mono text-[11px] sm:text-xs text-[#57606a] dark:text-[#8b949e] min-h-full overflow-hidden"
-              >
-                {Array.from({ length: Math.max(1, text.split('\n').length) }).map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="editor-gutter-num flex items-center justify-end font-bold select-none whitespace-nowrap text-[#57606a]/80 dark:text-[#8b949e]/60" 
-                    style={{ height: '1.625rem', lineHeight: '1.625rem' }}
-                  >
-                    <span>{String(i + 1).padStart(2, '0')}</span>
-                  </div>
-                ))}
-              </div>
-
+            {/* EDITOR WORKSPACE (High-Performance Overlay Textarea) */}
+            <div className="flex flex-1 bg-[#fbfbfb] dark:bg-[#0a0e14] min-h-[280px] sm:min-h-[350px] overflow-hidden relative">
               {/* EDITOR CONTAINER WITH SYNCHRONIZED BACKDROP + TEXTAREA */}
               <div className="flex-1 relative min-h-[280px] sm:min-h-[350px] overflow-hidden bg-[#fbfbfb] dark:bg-[#0a0e14]">
                 {/* HIGHLIGHT BACKDROP LAYER */}
@@ -1184,72 +1026,7 @@ export default function App() {
                   spellCheck={false}
                 />
 
-                {/* Interactive Grammar & Spelling Tooltip Card */}
-                <AnimatePresence>
-                  {tooltipState && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 5 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 5 }}
-                      style={{
-                        position: "fixed",
-                        left: `${tooltipState.x}px`,
-                        top: `${tooltipState.y}px`,
-                        transform: "translate(-50%, -100%) translateY(-10px)"
-                      }}
-                      className="z-50 w-72 bg-[#161b22] text-[#c9d1d9] border border-[#30363d] rounded-lg p-3 shadow-2xl font-mono text-xs backdrop-blur-md"
-                    >
-                      <div className="flex items-center justify-between border-b border-[#30363d] pb-2 mb-2">
-                        <span className="font-bold text-[11px] uppercase tracking-wider text-[#58a6ff]">
-                          {tooltipState.issue.type}
-                        </span>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase ${
-                          tooltipState.issue.severity === "spelling" ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                        }`}>
-                          {tooltipState.issue.severity}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2 mb-2 text-xs">
-                        <span className="line-through text-red-400 bg-red-900/20 px-1.5 py-0.5 rounded font-medium">
-                          {tooltipState.issue.original}
-                        </span>
-                        <span className="text-[#8b949e]">→</span>
-                        <button
-                          onClick={() => {
-                            applySingleGrammarSuggestion(tooltipState.issue);
-                            setTooltipState(null);
-                          }}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2 py-0.5 rounded transition-all cursor-pointer shadow-xs active:scale-95"
-                        >
-                          {tooltipState.issue.suggestion}
-                        </button>
-                      </div>
-
-                      <p className="text-[11px] text-[#8b949e] font-sans leading-relaxed mb-2 italic">
-                        {tooltipState.issue.explanation}
-                      </p>
-
-                      <div className="flex items-center justify-end gap-2 border-t border-[#30363d] pt-2">
-                        <button
-                          onClick={() => setTooltipState(null)}
-                          className="text-[10px] text-[#8b949e] hover:text-white px-2 py-1 rounded cursor-pointer"
-                        >
-                          Dismiss
-                        </button>
-                        <button
-                          onClick={() => {
-                            applySingleGrammarSuggestion(tooltipState.issue);
-                            setTooltipState(null);
-                          }}
-                          className="text-[10px] bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 px-2 py-1 rounded font-bold transition-all cursor-pointer"
-                        >
-                          Apply Fix
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                
               </div>
             </div>
 
@@ -1283,7 +1060,7 @@ export default function App() {
                 >
                   <div className="text-xs font-mono text-[#f0883e] flex flex-wrap gap-x-1.5 items-center">
                     <span className="font-semibold">[!] Flagged keywords:</span>
-                    {Array.from(new Set(matchedRanges.map(m => m.word.toLowerCase()))).map((w, idx) => (
+                    {flaggedWords.map((w, idx) => (
                       <span key={idx} className="bg-[rgba(240,136,62,0.12)] border border-[#f0883e]/30 px-1.5 py-0.25 rounded-md font-mono text-[10px] text-[#f0883e] mr-1 mt-0.5">
                         {w}
                       </span>
@@ -1359,7 +1136,7 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-1 text-[#8b949e]">
                       <Cpu className="w-3 h-3 text-[#3fb950]" />
-                      <span>System:</span> Pure Client NLP
+                      <span>System:</span> Restricted-word detection
                     </div>
                   </div>
 
@@ -1385,7 +1162,7 @@ export default function App() {
                         <span>No restricted words or rule violations found in workspace.</span>
                       </div>
                     ) : (
-                      matchedRanges.map((m, idx) => (
+                      displayedMatchedRanges.map((m, idx) => (
                         <div key={idx} className="flex items-center justify-between gap-2 px-1 py-1 hover:bg-[#161b22] rounded text-[#f0883e]">
                           <span className="font-bold flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#f0883e]"></span>
@@ -1396,6 +1173,11 @@ export default function App() {
                       ))
                     )
                   )}
+                  {activeConsoleTab === "problems" && matchedRanges.length > MAX_DISPLAYED_MATCHES && (
+                    <div className="px-1 py-2 text-xs text-[#8b949e]">
+                      Showing the first {MAX_DISPLAYED_MATCHES} of {matchedRanges.length} match rows. All matches remain active for detection and obfuscation.
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1404,9 +1186,6 @@ export default function App() {
             <div className="p-3 sm:p-4 bg-[#f6f8fa] dark:bg-[#161b22]/70 border-t border-[#d0d7de] dark:border-[#30363d] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
               {/* Lines / Characters Counter / Speed & Memory Tracker */}
               <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2.5 sm:gap-4 text-[11px] sm:text-xs font-mono text-[#57606a] dark:text-[#8b949e]">
-                <div>
-                  ln <span className="font-semibold text-[#24292f] dark:text-white">{text.split('\n').length}</span>
-                </div>
                 <div>
                   col <span className="font-semibold text-[#24292f] dark:text-white">{charCount}</span>
                 </div>
@@ -1444,21 +1223,6 @@ export default function App() {
                   </button>
                 )}
 
-                {/* Pure Client NLP Indicator */}
-                <div className="flex bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md px-2 py-1 text-[10px] font-bold font-mono h-8 items-center text-[#3fb950] shrink-0 gap-1" title="Pure Client-Side NLP Engine (Zero Server Dependencies)">
-                  <Cpu className="w-3 h-3 text-[#3fb950]" />
-                  <span>Client NLP</span>
-                </div>
-
-                <button
-                  onClick={() => checkGrammarWithAI(true)}
-                  disabled={isGrammarChecking}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] text-[11px] sm:text-xs font-medium font-mono rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer h-8"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
-                  <span>{isGrammarChecking ? "Scanning..." : "Scan Grammar"}</span>
-                </button>
-
                 <button
                   onClick={handleSaveCurrentAsTemplateTrigger}
                   className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[11px] sm:text-xs font-bold font-mono rounded-md transition-all flex items-center gap-1.5 cursor-pointer h-8"
@@ -1482,7 +1246,7 @@ export default function App() {
         </section>
 
         {/* ==========================================
-            RIGHT WORKSPACE - SIDEBAR (RULES & GRAMMAR)
+            RIGHT WORKSPACE - RESTRICTED WORD RULES
             ========================================== */}
         <aside className="hidden md:flex flex-col gap-4 w-80 lg:w-96 shrink-0">
           <UnifiedSidebar 
@@ -1496,19 +1260,7 @@ export default function App() {
             handleRemoveWord={handleRemoveWord}
             handleResetWords={handleResetWords}
             graspSubstrings={graspSubstrings}
-            setGraspSubstrings={setGraspSubstrings}
-            sidebarTab={sidebarTab}
-            setSidebarTab={setSidebarTab}
-            grammarSuggestions={grammarSuggestions}
-            isGrammarChecking={isGrammarChecking}
-            grammarMode={grammarMode}
-            setGrammarMode={setGrammarMode}
-            grammarErrorBanner={grammarErrorBanner}
-            checkGrammarWithAI={checkGrammarWithAI}
-            applySingleGrammarSuggestion={applySingleGrammarSuggestion}
-            handleIgnoreIssue={handleIgnoreIssue}
-            applyAllGrammarSuggestions={applyAllGrammarSuggestions}
-          />
+            setGraspSubstrings={setGraspSubstrings}          />
         </aside>
 
       </main>
@@ -1559,19 +1311,7 @@ export default function App() {
                   handleRemoveWord={handleRemoveWord}
                   handleResetWords={handleResetWords}
                   graspSubstrings={graspSubstrings}
-                  setGraspSubstrings={setGraspSubstrings}
-                  sidebarTab={sidebarTab}
-                  setSidebarTab={setSidebarTab}
-                  grammarSuggestions={grammarSuggestions}
-                  isGrammarChecking={isGrammarChecking}
-                  grammarMode={grammarMode}
-                  setGrammarMode={setGrammarMode}
-                  grammarErrorBanner={grammarErrorBanner}
-                  checkGrammarWithAI={checkGrammarWithAI}
-                  applySingleGrammarSuggestion={applySingleGrammarSuggestion}
-                  handleIgnoreIssue={handleIgnoreIssue}
-                  applyAllGrammarSuggestions={applyAllGrammarSuggestions}
-                />
+                  setGraspSubstrings={setGraspSubstrings}                />
               </div>
             </motion.div>
           </>
@@ -2075,14 +1815,6 @@ export default function App() {
                     action: () => { triggerManualDetect(); setIsCommandPaletteOpen(false); }
                   },
                   {
-                    id: "grammar",
-                    title: "Run Pure Client-Side NLP Scan",
-                    icon: Sparkles,
-                    color: "text-[#58a6ff]",
-                    shortcut: "Audit",
-                    action: () => { checkGrammarWithAI(true); setIsCommandPaletteOpen(false); }
-                  },
-                  {
                     id: "copy",
                     title: "Copy Plain Text Result",
                     icon: Copy,
@@ -2178,14 +1910,6 @@ export default function App() {
         </button>
 
         <button
-          onClick={() => checkGrammarWithAI()}
-          className="flex flex-col items-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>Grammar</span>
-        </button>
-
-        <button
           onClick={handleCopy}
           className="flex flex-col items-center gap-1 text-[10px] text-[#3fb950] font-bold p-1.5 cursor-pointer"
         >
@@ -2210,8 +1934,7 @@ export default function App() {
 // RENDER COMPONENT FOR RESTRICTED WORDS
 // ==========================================
 // ==========================================
-// RENDER COMPONENT FOR UNIFIED SIDEBAR (RULES & GRAMMAR)
-// ==========================================
+// RENDER COMPONENT FOR RESTRICTED WORDS
 interface UnifiedSidebarProps {
   restrictedWords: string[];
   filteredWords: string[];
@@ -2224,76 +1947,11 @@ interface UnifiedSidebarProps {
   handleResetWords: () => void;
   graspSubstrings: boolean;
   setGraspSubstrings: React.Dispatch<React.SetStateAction<boolean>>;
-  
-  // Grammar system props
-  sidebarTab: "restricted" | "grammar";
-  setSidebarTab: (tab: "restricted" | "grammar") => void;
-  grammarSuggestions: GrammarIssue[];
-  isGrammarChecking: boolean;
-  grammarMode: "fast" | "accurate";
-  setGrammarMode: (mode: "fast" | "accurate") => void;
-  grammarErrorBanner: string | null;
-  checkGrammarWithAI: (isManual?: boolean) => void;
-  applySingleGrammarSuggestion: (issue: GrammarIssue) => void;
-  handleIgnoreIssue: (issue: GrammarIssue) => void;
-  applyAllGrammarSuggestions: () => void;
 }
 
-function UnifiedSidebar({
-  restrictedWords,
-  filteredWords,
-  newWordInput,
-  setNewWordInput,
-  wordFilter,
-  setWordFilter,
-  handleAddWord,
-  handleRemoveWord,
-  handleResetWords,
-  graspSubstrings,
-  setGraspSubstrings,
-  sidebarTab,
-  setSidebarTab,
-  grammarSuggestions,
-  isGrammarChecking,
-  grammarMode,
-  setGrammarMode,
-  grammarErrorBanner,
-  checkGrammarWithAI,
-  applySingleGrammarSuggestion,
-  handleIgnoreIssue,
-  applyAllGrammarSuggestions
-}: UnifiedSidebarProps) {
+function UnifiedSidebar({ restrictedWords, filteredWords, newWordInput, setNewWordInput, wordFilter, setWordFilter, handleAddWord, handleRemoveWord, handleResetWords, graspSubstrings, setGraspSubstrings }: UnifiedSidebarProps) {
   return (
     <div className="bg-[#f6f8fa] dark:bg-[#161b22] rounded-md border border-[#d0d7de] dark:border-[#30363d] p-4 flex flex-col gap-4 h-full">
-      {/* Tab Headers */}
-      <div className="flex border-b border-[#d0d7de] dark:border-[#30363d] pb-2 text-xs font-mono gap-1 select-none shrink-0">
-        <button
-          onClick={() => setSidebarTab("restricted")}
-          type="button"
-          className={`flex-1 py-1.5 px-3 font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-            sidebarTab === "restricted"
-              ? "bg-[#ffffff] dark:bg-[#0d1117] text-[#24292f] dark:text-white border border-[#d0d7de] dark:border-[#30363d] shadow-xs"
-              : "text-[#57606a] dark:text-[#8b949e] hover:text-[#24292f] dark:hover:text-white hover:bg-[#eaeef2]/50 dark:hover:bg-[#30363d]/30"
-          }`}
-        >
-          <Shield className="w-3.5 h-3.5 text-[#f0883e]" />
-          <span>Rules ({restrictedWords.length})</span>
-        </button>
-        <button
-          onClick={() => setSidebarTab("grammar")}
-          type="button"
-          className={`flex-1 py-1.5 px-3 font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
-            sidebarTab === "grammar"
-              ? "bg-[#ffffff] dark:bg-[#0d1117] text-[#24292f] dark:text-white border border-[#d0d7de] dark:border-[#30363d] shadow-xs"
-              : "text-[#57606a] dark:text-[#8b949e] hover:text-[#24292f] dark:hover:text-white hover:bg-[#eaeef2]/50 dark:hover:bg-[#30363d]/30"
-          }`}
-        >
-          <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
-          <span>Grammar ({grammarSuggestions.length})</span>
-        </button>
-      </div>
-
-      {sidebarTab === "restricted" ? (
         <div className="flex flex-col gap-4 h-full">
           <div>
             <h2 className="text-xs font-bold font-mono text-[#24292f] dark:text-white uppercase tracking-wider flex items-center gap-2">
@@ -2421,181 +2079,7 @@ function UnifiedSidebar({
             </div>
           </div>
         </div>
-      ) : (
-        <div className="flex flex-col gap-4 h-full">
-          <div>
-            <h2 className="text-xs font-bold font-mono text-[#24292f] dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#58a6ff]" />
-              <span>Basic Grammar Check</span>
-            </h2>
-            <p className="text-xs text-[#57606a] dark:text-[#8b949e] mt-1.5 font-sans">
-              Instant client-side verification for essential capitalization, spacing, contractions, and basic punctuation.
-            </p>
-          </div>
-
-          {/* Pure Client NLP Status & Action */}
-          <div className="p-3 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md flex flex-col gap-3 font-mono shrink-0 shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-[#57606a] dark:text-[#8b949e] uppercase">Engine:</span>
-              <span className="text-[10px] px-2 py-0.5 bg-[#3fb950]/10 border border-[#3fb950]/30 text-[#3fb950] font-bold rounded flex items-center gap-1">
-                <Check className="w-3 h-3 text-[#3fb950]" />
-                <span>Basic Grammar Engine</span>
-              </span>
-            </div>
-
-            <motion.button
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => checkGrammarWithAI(true)}
-              disabled={isGrammarChecking}
-              type="button"
-              className="w-full py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              {isGrammarChecking ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Checking basic grammar...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-3.5 h-3.5 text-[#58a6ff]" />
-                  <span>Scan Basic Grammar</span>
-                </>
-              )}
-            </motion.button>
-          </div>
-
-          {/* Persistent Error Banner inside Grammar tab */}
-          {grammarErrorBanner && (
-            <div className="bg-[#f85149]/10 border border-[#f85149]/30 rounded-md p-3 text-xs font-mono text-[#f85149] flex flex-col gap-2 shrink-0">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <div>
-                  <span className="font-bold block">[ERROR STATUS]</span>
-                  <span className="leading-relaxed text-[11px] block">{grammarErrorBanner}</span>
-                </div>
-              </div>
-              <button
-                onClick={() => checkGrammarWithAI()}
-                type="button"
-                className="w-full mt-1 bg-[#f85149]/20 hover:bg-[#f85149]/30 border border-[#f85149]/40 py-1 rounded-md text-[10px] uppercase font-bold transition-all text-[#f85149] cursor-pointer"
-              >
-                Retry check
-              </button>
-            </div>
-          )}
-
-          {/* Actions Header (Apply All if issues exist) */}
-          {grammarSuggestions.length > 0 && (
-            <div className="flex items-center justify-between font-mono shrink-0">
-              <span className="text-[10px] font-bold text-[#57606a] dark:text-[#8b949e] uppercase">
-                {grammarSuggestions.length} basic issue{grammarSuggestions.length > 1 ? "s" : ""} found
-              </span>
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={applyAllGrammarSuggestions}
-                type="button"
-                className="px-2.5 py-1 bg-[#3fb950]/15 hover:bg-[#3fb950]/25 border border-[#3fb950]/40 text-[#3fb950] text-[10px] font-bold rounded-md transition-colors cursor-pointer flex items-center gap-1"
-              >
-                <CheckCircle2 className="w-3 h-3" />
-                <span>Fix All Basic Grammar</span>
-              </motion.button>
-            </div>
-          )}
-
-          {/* List of Grammar Issue Cards */}
-          <div className="flex-1 overflow-y-auto max-h-[350px] md:max-h-[450px] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-2 bg-[#ffffff] dark:bg-[#0a0e14] flex flex-col gap-2">
-            <AnimatePresence mode="popLayout">
-              {grammarSuggestions.map((issue, idx) => {
-                let sevBg = "bg-[#dc2626]/10 text-[#dc2626] border-[#dc2626]/30";
-                if (issue.severity === "minor") sevBg = "bg-[#d97706]/10 text-[#d97706] border-[#d97706]/30";
-                else if (issue.severity === "spelling") sevBg = "bg-[#2563eb]/10 text-[#2563eb] border-[#2563eb]/30";
-                
-                return (
-                  <motion.div
-                    key={issue.startIndex + "-" + issue.original + "-" + idx}
-                    initial={{ opacity: 0, y: 8, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: -20, scale: 0.95 }}
-                    transition={{ duration: 0.2 }}
-                    className="p-3 bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md flex flex-col gap-2 font-mono text-xs text-[#24292f] dark:text-[#c9d1d9] shadow-xs"
-                  >
-                    {/* Header Row: Category Badge + Severity */}
-                    <div className="flex items-center justify-between gap-2 border-b border-[#d0d7de]/50 dark:border-[#30363d]/50 pb-1.5">
-                      <span className="font-bold text-[10px] text-[#24292f] dark:text-slate-200 uppercase truncate" title={issue.type}>
-                        {issue.type}
-                      </span>
-                      <span className={`text-[8px] px-1.5 py-0.25 rounded-full border font-bold uppercase shrink-0 ${sevBg}`}>
-                        {issue.severity}
-                      </span>
-                    </div>
-
-                    {/* Issue visual correction: flagged word vs suggestion */}
-                    <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="line-through text-[#f85149] select-all bg-[#f85149]/5 px-1 py-0.25 rounded-sm font-medium">
-                          {issue.original}
-                        </span>
-                        <ChevronRight className="w-3.5 h-3.5 text-[#57606a] dark:text-[#8b949e] shrink-0" />
-                        <span className="text-[#3fb950] font-bold select-all bg-[#3fb950]/5 px-1 py-0.25 rounded-sm">
-                          {issue.suggestion}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-[#57606a] dark:text-[#8b949e] leading-relaxed italic mt-0.5 font-sans">
-                        {issue.explanation}
-                      </p>
-                    </div>
-
-                    {/* Action Row: Apply + Ignore */}
-                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#d0d7de]/30 dark:border-[#30363d]/30 mt-1">
-                      <button
-                        onClick={() => handleIgnoreIssue(issue)}
-                        type="button"
-                        className="px-2 py-1 bg-transparent hover:bg-[#eaeef2] dark:hover:bg-[#30363d]/40 text-[#57606a] dark:text-[#8b949e] text-[10px] font-bold rounded-md transition-all cursor-pointer"
-                      >
-                        Ignore
-                      </button>
-                      <button
-                        onClick={() => applySingleGrammarSuggestion(issue)}
-                        type="button"
-                        className="px-2.5 py-1 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[10px] font-bold rounded-md transition-all cursor-pointer"
-                      >
-                        Apply Fix
-                      </button>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </AnimatePresence>
-
-            {grammarSuggestions.length === 0 && (
-              <div className="text-center py-8 text-[#57606a] dark:text-[#8b949e] h-full flex flex-col items-center justify-center">
-                {isGrammarChecking ? (
-                  <>
-                    <RefreshCw className="w-6 h-6 text-[#58a6ff] animate-spin mb-2" />
-                    <span className="text-xs font-mono">Scanning basic grammar...</span>
-                  </>
-                ) : (
-                  <motion.div
-                    initial={{ scale: 0.9, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex flex-col items-center"
-                  >
-                    <CheckSquare className="w-7 h-7 text-[#3fb950] mb-2" />
-                    <span className="text-xs font-sans italic font-bold text-[#3fb950]">Basic grammar is clean!</span>
-                    <span className="text-[10px] font-sans text-center px-4 mt-1 leading-relaxed text-[#57606a] dark:text-[#8b949e]">
-                      No capitalization, punctuation, or basic phrasing errors found.
-                    </span>
-                  </motion.div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
+      
     </div>
   );
 }

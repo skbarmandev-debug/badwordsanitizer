@@ -1,6 +1,5 @@
 {
   "name": "Bad Word Sanitizer",
-  "description": "Formates and sanitizes Fiverr messages for freelancers, detecting restricted words and offering grammar proofreading.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "description": "Formats and sanitizes Fiverr messages for freelancers by detecting restricted words.",
+  "requestFramePermissions": []
 }

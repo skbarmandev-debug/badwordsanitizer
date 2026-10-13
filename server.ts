@@ -13,7 +13,7 @@ async function startServer() {
 
   // Health check endpoint
   app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", mode: "pure-client-side-nlp" });
+    res.json({ status: "ok", mode: "restricted-word-detection" });
   });
 
   // Vite middleware for development
