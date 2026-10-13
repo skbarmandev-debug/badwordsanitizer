@@ -758,8 +758,8 @@ export default function App() {
       {/* ==========================================
           HEADER / WINDOW TITLE BAR
           ========================================== */}
-      <header className="sticky top-0 z-40 bg-[#f6f8fa]/95 dark:bg-[#161b22]/95 backdrop-blur-md border-b border-[#d0d7de] dark:border-[#30363d] px-3 py-2 sm:px-6 sm:py-2.5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
+      <header className="sticky top-0 z-40 bg-[#f6f8fa]/95 dark:bg-[#161b22]/95 backdrop-blur-md border-b border-[#d0d7de] dark:border-[#30363d] py-2 sm:py-2.5">
+        <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-6 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* macOS window traffic lights with glow */}
             <div className="hidden min-[380px]:flex items-center gap-1.5 mr-1 select-none shrink-0 group">
@@ -788,7 +788,7 @@ export default function App() {
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Live Ticking Clock / Timer */}
             {currentTime && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md font-mono text-[11px] text-[#24292f] dark:text-[#c9d1d9] select-none h-8 shadow-xs shrink-0">
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md font-mono text-[11px] text-[#24292f] dark:text-[#c9d1d9] select-none h-8 shadow-xs shrink-0">
                 <Clock className="w-3.5 h-3.5 text-[#58a6ff] animate-pulse" />
                 <span className="font-semibold">{currentTime}</span>
               </div>
@@ -810,7 +810,7 @@ export default function App() {
             {/* Command Palette Trigger Button (⌘K) */}
             <button
               onClick={() => setIsCommandPaletteOpen(true)}
-              className="px-2.5 py-1 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] rounded-md transition-all cursor-pointer h-8 flex items-center gap-1.5 font-mono text-xs font-semibold shadow-xs"
+              className="px-2 sm:px-2.5 py-1 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] rounded-md transition-all cursor-pointer h-10 min-w-10 sm:h-8 sm:min-w-0 flex items-center justify-center gap-1.5 font-mono text-xs font-semibold shadow-xs"
               title="Open Command Palette (Ctrl+K)"
             >
               <Command className="w-3.5 h-3.5 text-[#58a6ff]" />
@@ -821,7 +821,7 @@ export default function App() {
             {/* Templates Explorer Toggle Button */}
             <button
               onClick={() => setIsTemplatesDrawerOpen(!isTemplatesDrawerOpen)}
-              className={`p-1.5 sm:px-2.5 border rounded-md transition-all cursor-pointer flex items-center gap-1.5 text-xs font-mono font-bold h-8 ${
+              className={`p-2 sm:px-2.5 border rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 text-xs font-mono font-bold h-10 min-w-10 sm:h-8 sm:min-w-0 ${
                 isTemplatesDrawerOpen
                   ? "bg-[#58a6ff]/10 text-[#58a6ff] border-[#58a6ff]/30"
                   : "text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117]"
@@ -835,7 +835,7 @@ export default function App() {
             {/* Theme Toggle styled as a small coder icon button */}
             <button
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-              className="p-1.5 text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] dark:hover:text-[#58a6ff] border border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117] rounded-md transition-all cursor-pointer h-8 flex items-center justify-center"
+              className="p-2 sm:p-1.5 text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] dark:hover:text-[#58a6ff] border border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117] rounded-md transition-all cursor-pointer h-10 min-w-10 sm:h-8 sm:min-w-0 flex items-center justify-center"
               title="Toggle Theme (Light/Dark)"
             >
               {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
@@ -844,7 +844,7 @@ export default function App() {
             {/* Mobile Sidebar Trigger */}
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="md:hidden p-1.5 text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] border border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117] rounded-md transition-all cursor-pointer h-8 flex items-center justify-center"
+              className="md:hidden p-2 text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] border border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117] rounded-md transition-all cursor-pointer h-10 min-w-10 flex items-center justify-center"
               title="Open File Explorer Rules"
             >
               <Menu className="w-4 h-4" />
@@ -856,12 +856,12 @@ export default function App() {
       {/* ==========================================
           MAIN WORKSPACE GRID
           ========================================== */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 overflow-x-hidden">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 pb-20 sm:p-6 grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
         
         {/* ==========================================
             LEFT WORKSPACE - THE CODE AREA & ACTIONS
             ========================================== */}
-        <section className="md:col-span-2 flex flex-col gap-4 min-w-0">
+        <section className="xl:col-span-2 flex flex-col gap-4 min-w-0">
 
           {/* IDE EDITOR COMPONENT */}
           <div className="bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md shadow-sm flex flex-col flex-1 overflow-hidden min-w-0">
@@ -1086,12 +1086,12 @@ export default function App() {
                       </div>
                     ) : (
                       displayedMatchedRanges.map((m, idx) => (
-                        <div key={idx} className="flex items-center justify-between gap-2 px-1 py-1 hover:bg-[#161b22] rounded text-[#f0883e]">
-                          <span className="font-bold flex items-center gap-1.5">
+                        <div key={idx} className="flex flex-wrap items-start justify-between gap-2 px-1 py-1 hover:bg-[#161b22] rounded text-[#f0883e]">
+                          <span className="font-bold flex items-center gap-1.5 min-w-0 break-all">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#f0883e]"></span>
                             Restricted Word Flag: "{m.word}"
                           </span>
-                          <span className="text-[#8b949e] text-[10px]">Index: {m.start}..{m.end}</span>
+                          <span className="text-[#8b949e] text-[10px] break-all">Index: {m.start}..{m.end}</span>
                         </div>
                       ))
                     )
@@ -1129,7 +1129,7 @@ export default function App() {
               <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-2.5 w-full sm:w-auto">
                 <button
                   onClick={handleClearEditor}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f85149]/10 border border-[#d0d7de] dark:border-[#30363d] text-[#f85149] text-[11px] sm:text-xs font-medium font-mono rounded-md transition-colors flex items-center gap-1.5 cursor-pointer h-8"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f85149]/10 border border-[#d0d7de] dark:border-[#30363d] text-[#f85149] text-[11px] sm:text-xs font-medium font-mono rounded-md transition-colors flex items-center gap-1.5 cursor-pointer h-10 sm:h-8"
                   title="Clear the editor buffer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -1139,7 +1139,7 @@ export default function App() {
                 <button
                   id="detect-words-button"
                   onClick={triggerManualDetect}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[11px] sm:text-xs font-bold font-mono rounded-md transition-colors flex items-center gap-1.5 cursor-pointer h-8"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[11px] sm:text-xs font-bold font-mono rounded-md transition-colors flex items-center gap-1.5 cursor-pointer h-10 sm:h-8"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
                   <span>Detect Words</span>
@@ -1148,7 +1148,7 @@ export default function App() {
                 {matchedRanges.length > 0 && (
                   <button
                     onClick={triggerObfuscation}
-                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#f0883e] to-[#f0883e]/90 hover:from-[#f0883e]/90 hover:to-[#f0883e]/80 text-white text-[11px] sm:text-xs font-bold font-mono rounded-md transition-colors border border-transparent flex items-center gap-1.5 cursor-pointer h-8"
+                    className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#f0883e] to-[#f0883e]/90 hover:from-[#f0883e]/90 hover:to-[#f0883e]/80 text-white text-[11px] sm:text-xs font-bold font-mono rounded-md transition-colors border border-transparent flex items-center gap-1.5 cursor-pointer h-10 sm:h-8"
                   >
                     <Shield className="w-3.5 h-3.5" />
                     <span>Fix</span>
@@ -1157,7 +1157,7 @@ export default function App() {
 
                 <button
                   onClick={handleSaveCurrentAsTemplateTrigger}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[11px] sm:text-xs font-bold font-mono rounded-md transition-all flex items-center gap-1.5 cursor-pointer h-8"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#58a6ff]/10 hover:bg-[#58a6ff]/20 text-[#58a6ff] border border-[#58a6ff]/30 text-[11px] sm:text-xs font-bold font-mono rounded-md transition-all flex items-center gap-1.5 cursor-pointer h-10 sm:h-8"
                   title="Save current editor content as a reusable template"
                 >
                   <Save className="w-3.5 h-3.5" />
@@ -1166,7 +1166,7 @@ export default function App() {
 
                 <button
                   onClick={handleCopy}
-                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#1dbf73] hover:bg-[#1dbf73]/95 text-white text-[11px] sm:text-xs font-bold font-mono rounded-md transition-all flex items-center gap-1.5 cursor-pointer h-8 shadow-[0_0_12px_rgba(29,191,115,0.3)] active:scale-[0.98] border-none"
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#1dbf73] hover:bg-[#1dbf73]/95 text-white text-[11px] sm:text-xs font-bold font-mono rounded-md transition-all flex items-center gap-1.5 cursor-pointer h-10 sm:h-8 shadow-[0_0_12px_rgba(29,191,115,0.3)] active:scale-[0.98] border-none"
                   title="Copy the final clean plain text only (strips formatting)"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -1180,7 +1180,7 @@ export default function App() {
         {/* ==========================================
             RIGHT WORKSPACE - RESTRICTED WORD RULES
             ========================================== */}
-        <aside className="hidden md:flex flex-col gap-4 w-80 lg:w-96 shrink-0">
+        <aside className="hidden md:flex flex-col gap-4 w-full xl:w-96 min-w-0 shrink-0">
           <UnifiedSidebar 
             restrictedWords={restrictedWords}
             filteredWords={filteredWords}
@@ -1475,8 +1475,8 @@ export default function App() {
       {/* ==========================================
           PERMANENT, NON-REMOVABLE FOOTER
           ========================================== */}
-      <footer className="w-full py-4 px-6 border-t border-[#d0d7de] dark:border-[#30363d] mt-auto shrink-0 select-none bg-[#f6f8fa] dark:bg-[#161b22]/50 text-[#57606a] dark:text-[#8b949e] font-mono text-xs">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <footer className="w-full py-4 border-t border-[#d0d7de] dark:border-[#30363d] mt-auto shrink-0 select-none bg-[#f6f8fa] dark:bg-[#161b22]/50 text-[#57606a] dark:text-[#8b949e] font-mono text-xs">
+        <div className="max-w-[1600px] w-full mx-auto px-3 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>Bad Word Sanitizer &copy; {new Date().getFullYear()} — Fiverr-Safe Sanitizer</span>
           <span className="font-semibold text-[#24292f] dark:text-[#c9d1d9]">Built by Subroto Kumar Barman</span>
         </div>
@@ -1823,7 +1823,7 @@ export default function App() {
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#f6f8fa]/95 dark:bg-[#161b22]/95 backdrop-blur-md border-t border-[#d0d7de] dark:border-[#30363d] p-2 flex items-center justify-around shadow-lg font-mono">
         <button
           onClick={handleClearEditor}
-          className="flex flex-col items-center gap-1 text-[10px] text-[#f85149] p-1.5 cursor-pointer"
+          className="flex min-w-11 min-h-11 flex-col items-center justify-center gap-1 text-[10px] text-[#f85149] p-1.5 cursor-pointer"
           title="Clear the editor buffer"
         >
           <Trash2 className="w-4 h-4" />
@@ -1832,7 +1832,7 @@ export default function App() {
 
         <button
           onClick={triggerManualDetect}
-          className="flex flex-col items-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
+          className="flex min-w-11 min-h-11 flex-col items-center justify-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
         >
           <RefreshCw className="w-4 h-4" />
           <span>Detect</span>
@@ -1840,7 +1840,7 @@ export default function App() {
 
         <button
           onClick={triggerObfuscation}
-          className={`flex flex-col items-center gap-1 text-[10px] p-1.5 cursor-pointer ${
+          className={`flex min-w-11 min-h-11 flex-col items-center justify-center gap-1 text-[10px] p-1.5 cursor-pointer ${
             matchedRanges.length > 0 ? "text-[#f0883e] font-bold animate-pulse" : "text-[#57606a] dark:text-[#8b949e]"
           }`}
         >
@@ -1850,7 +1850,7 @@ export default function App() {
 
         <button
           onClick={handleCopy}
-          className="flex flex-col items-center gap-1 text-[10px] text-[#3fb950] font-bold p-1.5 cursor-pointer"
+          className="flex min-w-11 min-h-11 flex-col items-center justify-center gap-1 text-[10px] text-[#3fb950] font-bold p-1.5 cursor-pointer"
         >
           <Copy className="w-4 h-4" />
           <span>Copy</span>
@@ -1858,7 +1858,7 @@ export default function App() {
 
         <button
           onClick={() => setIsTemplatesDrawerOpen(!isTemplatesDrawerOpen)}
-          className="flex flex-col items-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
+          className="flex min-w-11 min-h-11 flex-col items-center justify-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
         >
           <FileText className="w-4 h-4" />
           <span>Templates</span>
