@@ -56,6 +56,62 @@ function reportSlowStage(stage: string, durationMs: number, details: Record<stri
   }
 }
 
+function useModalFocus(open: boolean, onClose: () => void, focusContainer = false) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  useEffect(() => {
+    if (!open) return;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const getFocusable = () => Array.from(dialog.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter(element => element.getClientRects().length > 0);
+    const focusable = getFocusable();
+    (focusContainer ? dialog : focusable[0] ?? dialog).focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog.contains(document.activeElement)) return;
+
+      const items = getFocusable();
+      if (items.length === 0) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
+  }, [open, focusContainer]);
+
+  return dialogRef;
+}
+
 
 
 
@@ -202,15 +258,37 @@ export default function App() {
     return DEFAULT_TEMPLATES;
   });
 
-  const [isTemplatesDrawerOpen, setIsTemplatesDrawerOpen] = useState(false);
+  const [mobileOpenPanel, setMobileOpenPanel] = useState<"trackedRules" | "messageTemplate" | null>(null);
+  const [isDesktopTemplatesDrawerOpen, setIsDesktopTemplatesDrawerOpen] = useState(false);
+  const isMobileSidebarOpen = mobileOpenPanel === "trackedRules";
+  const isTemplatesDrawerOpen = mobileOpenPanel === "messageTemplate" || isDesktopTemplatesDrawerOpen;
+  const toggleMobilePanel = (panel: "trackedRules" | "messageTemplate") => {
+    setIsDesktopTemplatesDrawerOpen(false);
+    setMobileOpenPanel(current => current === panel ? null : panel);
+  };
+  const openMessageTemplate = () => {
+    if (window.matchMedia("(max-width: 767px)").matches) {
+      setIsDesktopTemplatesDrawerOpen(false);
+      setMobileOpenPanel("messageTemplate");
+    } else {
+      setIsDesktopTemplatesDrawerOpen(true);
+    }
+  };
+  const closeMessageTemplate = () => {
+    setIsDesktopTemplatesDrawerOpen(false);
+    setMobileOpenPanel(current => current === "messageTemplate" ? null : current);
+  };
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({
     "First Update": true,
   });
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [pendingTemplateToLoad, setPendingTemplateToLoad] = useState<Template | null>(null);
+  const [isResetRulesDialogOpen, setIsResetRulesDialogOpen] = useState(false);
 
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [templateModalMode, setTemplateModalMode] = useState<'edit' | 'create' | 'save_current'>('create');
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
   const [templateModalData, setTemplateModalData] = useState<{
     id?: string;
     name: string;
@@ -259,7 +337,23 @@ export default function App() {
   // DOM Refs
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const backdropRef = useRef<HTMLDivElement>(null);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const resetRulesTriggerRef = useRef<HTMLButtonElement>(null);
+  const resetRulesDialogRef = useModalFocus(isResetRulesDialogOpen, () => setIsResetRulesDialogOpen(false));
+  const templateDialogRef = useModalFocus(isTemplateModalOpen, () => setIsTemplateModalOpen(false));
+  const commandPaletteDialogRef = useModalFocus(isCommandPaletteOpen, () => setIsCommandPaletteOpen(false), true);
+  const mobileSidebarDialogRef = useModalFocus(isMobileSidebarOpen, () => setMobileOpenPanel(null));
+  const templatesDrawerDialogRef = useModalFocus(isTemplatesDrawerOpen, closeMessageTemplate);
+  const commandPaletteInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 768px)");
+    const resetPanelForBreakpoint = () => {
+      setMobileOpenPanel(null);
+      setIsDesktopTemplatesDrawerOpen(false);
+    };
+    desktopQuery.addEventListener("change", resetPanelForBreakpoint);
+    return () => desktopQuery.removeEventListener("change", resetPanelForBreakpoint);
+  }, []);
 
   // Compute matches & highlighted text with zero-latency memoization
   const matcher = useMemo(
@@ -329,8 +423,6 @@ export default function App() {
   }, [text, matchedRanges]);
 
   // Developer Workstation UI States
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  const [commandPaletteQuery, setCommandPaletteQuery] = useState("");
   const [isConsoleOpen, setIsConsoleOpen] = useState(true);
   const [activeConsoleTab, setActiveConsoleTab] = useState<"terminal" | "problems">("terminal");
   const [terminalLogs, setTerminalLogs] = useState<Array<{ id: string; time: string; type: "info" | "warn" | "success" | "sys"; text: string }>>([
@@ -346,6 +438,11 @@ export default function App() {
   // Global Keyboard Listener for Cmd+K / Ctrl+K Command Palette
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setPendingTemplateToLoad(null);
+        setDeleteConfirmId(null);
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsCommandPaletteOpen(prev => !prev);
@@ -354,6 +451,11 @@ export default function App() {
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!isCommandPaletteOpen || !window.matchMedia("(pointer: fine)").matches) return;
+    commandPaletteInputRef.current?.focus();
+  }, [isCommandPaletteOpen]);
 
   // Sync theme to root class list
   useEffect(() => {
@@ -566,7 +668,10 @@ export default function App() {
   const handleAddWord = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanWord = newWordInput.trim().toLowerCase();
-    if (!cleanWord) return;
+    if (!cleanWord) {
+      addToast("Enter a word to add to the restricted list.", "error");
+      return;
+    }
 
     if (restrictedWords.includes(cleanWord)) {
       addToast(`"${cleanWord}" is already on the restricted list.`, "info");
@@ -585,10 +690,13 @@ export default function App() {
   };
 
   const handleResetWords = () => {
-    if (window.confirm("Are you sure you want to restore the default restricted words list?")) {
-      setRestrictedWords(DEFAULT_RESTRICTED_WORDS);
-      addToast("Restricted words restored to default", "success");
-    }
+    setIsResetRulesDialogOpen(true);
+  };
+
+  const confirmResetWords = () => {
+    setRestrictedWords(DEFAULT_RESTRICTED_WORDS);
+    setIsResetRulesDialogOpen(false);
+    addToast("Restricted words restored to default", "success");
   };
 
   // ==========================================
@@ -693,7 +801,10 @@ export default function App() {
         return;
       }
       const target = templates.find(t => t.id === overwriteTargetId);
-      if (!target) return;
+      if (!target) {
+        addToast("The selected template is unavailable. Choose another template.", "error");
+        return;
+      }
       
       setTemplates(prev => prev.map(t => {
         if (t.id === overwriteTargetId) {
@@ -712,6 +823,14 @@ export default function App() {
     const nameClean = templateModalData.name.trim();
     if (!nameClean) {
       addToast("Please enter a template title.", "error");
+      return;
+    }
+    if (!templateModalData.content.trim()) {
+      addToast("Please enter template content.", "error");
+      return;
+    }
+    if (!FIXED_CATEGORIES.includes(templateModalData.category as typeof FIXED_CATEGORIES[number])) {
+      addToast("Please select a valid template category.", "error");
       return;
     }
     
@@ -753,7 +872,7 @@ export default function App() {
   const displayedMatchedRanges = matchedRanges.slice(0, MAX_DISPLAYED_MATCHES);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#ffffff] dark:bg-[#0d1117] text-[#24292f] dark:text-[#c9d1d9] font-sans selection:bg-[#58a6ff]/30 transition-colors duration-200">
+    <div className="app-shell min-h-screen flex flex-col bg-[#ffffff] dark:bg-[#0d1117] text-[#24292f] dark:text-[#c9d1d9] font-sans selection:bg-[#58a6ff]/30 transition-colors duration-200">
       
       {/* ==========================================
           HEADER / WINDOW TITLE BAR
@@ -818,20 +937,6 @@ export default function App() {
               <kbd className="hidden sm:inline-block px-1.5 py-0.25 bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded text-[9px] text-[#57606a] dark:text-[#8b949e] font-sans font-bold">⌘K</kbd>
             </button>
 
-            {/* Templates Explorer Toggle Button */}
-            <button
-              onClick={() => setIsTemplatesDrawerOpen(!isTemplatesDrawerOpen)}
-              className={`p-2 sm:px-2.5 border rounded-md transition-all cursor-pointer flex items-center justify-center gap-1.5 text-xs font-mono font-bold h-10 min-w-10 sm:h-8 sm:min-w-0 ${
-                isTemplatesDrawerOpen
-                  ? "bg-[#58a6ff]/10 text-[#58a6ff] border-[#58a6ff]/30"
-                  : "text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117]"
-              }`}
-              title="Toggle Templates Explorer"
-            >
-              <FileText className="w-4 h-4 text-[#58a6ff]" />
-              <span className="hidden sm:inline">Templates</span>
-            </button>
-
             {/* Theme Toggle styled as a small coder icon button */}
             <button
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
@@ -843,11 +948,27 @@ export default function App() {
 
             {/* Mobile Sidebar Trigger */}
             <button
-              onClick={() => setIsMobileSidebarOpen(true)}
+              onClick={() => toggleMobilePanel("trackedRules")}
               className="md:hidden p-2 text-[#57606a] dark:text-[#8b949e] hover:text-[#58a6ff] border border-[#d0d7de] dark:border-[#30363d] hover:bg-[#ffffff] dark:hover:bg-[#0d1117] rounded-md transition-all cursor-pointer h-10 min-w-10 flex items-center justify-center"
-              title="Open File Explorer Rules"
+              aria-label="Tracked Rules Explorer"
+              aria-expanded={isMobileSidebarOpen}
+              title={isMobileSidebarOpen ? "Close Tracked Rules Explorer" : "Open Tracked Rules Explorer"}
             >
               <Menu className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => toggleMobilePanel("messageTemplate")}
+              className={`md:hidden min-h-10 min-w-10 px-1.5 border rounded-md transition-colors flex items-center justify-center gap-1 font-mono text-[9px] font-bold whitespace-nowrap ${
+                mobileOpenPanel === "messageTemplate"
+                  ? "bg-[#58a6ff]/10 text-[#58a6ff] border-[#58a6ff]/30"
+                  : "bg-[#ffffff] dark:bg-[#0d1117] text-[#57606a] dark:text-[#c9d1d9] border-[#d0d7de] dark:border-[#30363d] hover:text-[#58a6ff]"
+              }`}
+              aria-label="Message Template"
+              aria-expanded={mobileOpenPanel === "messageTemplate"}
+              title={mobileOpenPanel === "messageTemplate" ? "Close Message Template" : "Open Message Template"}
+            >
+              <FileText className="w-3 h-3 text-[#58a6ff] shrink-0" />
+              <span>Message Template</span>
             </button>
           </div>
         </div>
@@ -856,12 +977,12 @@ export default function App() {
       {/* ==========================================
           MAIN WORKSPACE GRID
           ========================================== */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 pb-20 sm:p-6 grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 pb-20 sm:px-6 sm:py-4 grid grid-cols-1 xl:grid-cols-[24rem_minmax(0,1fr)] gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4">
         
         {/* ==========================================
-            LEFT WORKSPACE - THE CODE AREA & ACTIONS
+            DESKTOP RIGHT WORKSPACE - THE CODE AREA & ACTIONS
             ========================================== */}
-        <section className="xl:col-span-2 flex flex-col gap-4 min-w-0">
+        <section className="xl:order-2 flex flex-col gap-4 min-w-0">
 
           {/* IDE EDITOR COMPONENT */}
           <div className="bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md shadow-sm flex flex-col flex-1 overflow-hidden min-w-0">
@@ -923,9 +1044,9 @@ export default function App() {
             </div>
 
             {/* EDITOR WORKSPACE (High-Performance Overlay Textarea) */}
-            <div className="flex flex-1 bg-[#fbfbfb] dark:bg-[#0a0e14] min-h-[280px] sm:min-h-[350px] overflow-hidden relative">
+            <div className="flex flex-1 bg-[#fbfbfb] dark:bg-[#0a0e14] min-h-[280px] sm:min-h-[350px] md:min-h-[clamp(260px,calc(100dvh-500px),680px)] overflow-hidden relative">
               {/* EDITOR CONTAINER WITH SYNCHRONIZED BACKDROP + TEXTAREA */}
-              <div className="flex-1 relative min-h-[280px] sm:min-h-[350px] overflow-hidden bg-[#fbfbfb] dark:bg-[#0a0e14]">
+              <div className="flex-1 relative min-h-[280px] sm:min-h-[350px] md:min-h-[clamp(260px,calc(100dvh-500px),680px)] overflow-hidden bg-[#fbfbfb] dark:bg-[#0a0e14]">
                 {/* HIGHLIGHT BACKDROP LAYER */}
                 <div
                   ref={backdropRef}
@@ -994,7 +1115,7 @@ export default function App() {
             </AnimatePresence>
 
             {/* INTEGRATED DEVELOPER CONSOLE DRAWER */}
-            <div className="border-t border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117] shrink-0 font-mono">
+            <div className="hidden sm:block border-t border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117] shrink-0 font-mono">
               <div className="flex items-center justify-between px-3 py-1.5 bg-[#eaeef2] dark:bg-[#161b22] border-b border-[#d0d7de] dark:border-[#30363d] text-[11px] select-none">
                 <div className="flex items-center gap-3">
                   <button
@@ -1047,7 +1168,7 @@ export default function App() {
               </div>
 
               {isConsoleOpen && (
-                <div className="p-2 sm:p-3 max-h-36 overflow-y-auto space-y-1.5 text-[11px] leading-relaxed bg-[#0a0e14] text-[#c9d1d9] border-b border-[#30363d]">
+                <div className="p-2 sm:p-3 max-h-[min(8rem,12dvh)] overflow-y-auto space-y-1.5 text-[11px] leading-relaxed bg-[#0a0e14] text-[#c9d1d9] border-b border-[#30363d]">
                   <div className="flex flex-wrap items-center gap-3 sm:gap-5 pb-1.5 mb-1.5 border-b border-[#30363d]/60 text-[10px] font-mono">
                     <div className="flex items-center gap-1 text-[#58a6ff] font-bold">
                       <Zap className="w-3 h-3 text-[#58a6ff]" />
@@ -1161,7 +1282,7 @@ export default function App() {
                   title="Save current editor content as a reusable template"
                 >
                   <Save className="w-3.5 h-3.5" />
-                  <span>Save as Template</span>
+                  <span>Save as Message Template</span>
                 </button>
 
                 <button
@@ -1178,9 +1299,9 @@ export default function App() {
         </section>
 
         {/* ==========================================
-            RIGHT WORKSPACE - RESTRICTED WORD RULES
+            DESKTOP LEFT WORKSPACE - RESTRICTED WORD RULES
             ========================================== */}
-        <aside className="hidden md:flex flex-col gap-4 w-full xl:w-96 min-w-0 shrink-0">
+        <aside className="hidden md:flex xl:order-1 flex-col gap-4 w-full xl:w-96 min-w-0 shrink-0">
           <UnifiedSidebar 
             restrictedWords={restrictedWords}
             filteredWords={filteredWords}
@@ -1191,6 +1312,10 @@ export default function App() {
             handleAddWord={handleAddWord}
             handleRemoveWord={handleRemoveWord}
             handleResetWords={handleResetWords}
+            resetRulesTriggerRef={resetRulesTriggerRef}
+            isTemplatesDrawerOpen={isTemplatesDrawerOpen}
+            onToggleTemplates={() => setIsDesktopTemplatesDrawerOpen(value => !value)}
+            showTemplateToggle
             graspSubstrings={graspSubstrings}
             setGraspSubstrings={setGraspSubstrings}
           />
@@ -1209,7 +1334,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.6 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsMobileSidebarOpen(false)}
+              onClick={() => setMobileOpenPanel(null)}
               className="fixed inset-0 bg-[#000000] z-50 md:hidden"
             />
             {/* Drawer */}
@@ -1217,8 +1342,13 @@ export default function App() {
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "tween", duration: 0.2 }}
-              className="fixed right-0 top-0 bottom-0 w-[85vw] max-w-sm bg-[#ffffff] dark:bg-[#161b22] shadow-2xl z-55 md:hidden flex flex-col border-l border-[#d0d7de] dark:border-[#30363d]"
+              transition={{ type: "tween", duration: window.matchMedia("(max-width: 767px)").matches ? 0 : 0.2 }}
+              ref={mobileSidebarDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Workspace rules"
+              tabIndex={-1}
+              className="fixed right-0 top-0 h-dvh max-h-dvh w-[85vw] max-w-sm bg-[#ffffff] dark:bg-[#161b22] shadow-2xl z-55 md:hidden flex flex-col border-l border-[#d0d7de] dark:border-[#30363d]"
             >
               <div className="p-4 border-b border-[#d0d7de] dark:border-[#30363d] flex items-center justify-between">
                 <div className="flex items-center gap-2 font-mono">
@@ -1226,7 +1356,7 @@ export default function App() {
                   <span className="font-bold text-xs uppercase tracking-wider">WORKSPACE EXPLORER</span>
                 </div>
                 <button
-                  onClick={() => setIsMobileSidebarOpen(false)}
+                  onClick={() => setMobileOpenPanel(null)}
                   className="p-1 text-[#57606a] dark:text-[#8b949e] hover:bg-[#f6f8fa] dark:hover:bg-[#0d1117] rounded-md cursor-pointer"
                 >
                   <X className="w-4 h-4" />
@@ -1243,6 +1373,10 @@ export default function App() {
                   handleAddWord={handleAddWord}
                   handleRemoveWord={handleRemoveWord}
                   handleResetWords={handleResetWords}
+                  resetRulesTriggerRef={resetRulesTriggerRef}
+                  isTemplatesDrawerOpen={isTemplatesDrawerOpen}
+                  onToggleTemplates={() => setIsDesktopTemplatesDrawerOpen(value => !value)}
+                  showTemplateToggle={false}
                   graspSubstrings={graspSubstrings}
                   setGraspSubstrings={setGraspSubstrings}
                 />
@@ -1263,7 +1397,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.6 }}
               exit={{ opacity: 0 }}
-              onClick={() => setIsTemplatesDrawerOpen(false)}
+              onClick={closeMessageTemplate}
               className="fixed inset-0 bg-[#000000]/60 z-50 backdrop-blur-xs"
             />
             {/* Drawer Sliding from Left */}
@@ -1271,17 +1405,22 @@ export default function App() {
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={{ type: "tween", duration: 0.2 }}
-              className="fixed left-0 top-0 bottom-0 w-[85vw] max-w-md bg-[#ffffff] dark:bg-[#161b22] shadow-2xl z-55 flex flex-col border-r border-[#d0d7de] dark:border-[#30363d] font-mono text-xs"
+              transition={{ type: "tween", duration: window.matchMedia("(max-width: 767px)").matches ? 0 : 0.2 }}
+              ref={templatesDrawerDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Message Template"
+              tabIndex={-1}
+              className="fixed left-0 top-0 h-dvh max-h-dvh w-[85vw] max-w-md bg-[#ffffff] dark:bg-[#161b22] shadow-2xl z-55 flex flex-col border-r border-[#d0d7de] dark:border-[#30363d] font-mono text-xs"
             >
               {/* Header */}
               <div className="p-4 border-b border-[#d0d7de] dark:border-[#30363d] flex items-center justify-between bg-[#f6f8fa] dark:bg-[#0d1117]/80 shrink-0 select-none">
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#58a6ff]" />
-                  <span className="font-bold text-xs uppercase tracking-wider text-[#24292f] dark:text-white">Templates Explorer</span>
+                  <span className="font-bold text-xs uppercase tracking-wider text-[#24292f] dark:text-white">Message Template</span>
                 </div>
                 <button
-                  onClick={() => setIsTemplatesDrawerOpen(false)}
+                  onClick={closeMessageTemplate}
                   className="p-1 text-[#57606a] dark:text-[#8b949e] hover:bg-[#d0d7de]/50 dark:hover:bg-[#30363d]/50 rounded-md cursor-pointer"
                   title="Close Explorer"
                 >
@@ -1482,12 +1621,58 @@ export default function App() {
         </div>
       </footer>
 
+      <AnimatePresence>
+        {isResetRulesDialogOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.6 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black"
+            />
+            <motion.div
+              ref={resetRulesDialogRef}
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="reset-rules-title"
+              aria-describedby="reset-rules-description"
+              tabIndex={-1}
+              initial={{ scale: 0.97, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.97, opacity: 0 }}
+              className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-md border border-[#d0d7de] dark:border-[#30363d] bg-[#ffffff] dark:bg-[#161b22] p-5 shadow-2xl font-mono text-sm text-[#24292f] dark:text-[#c9d1d9]"
+            >
+              <h2 id="reset-rules-title" className="font-bold text-[#24292f] dark:text-white">Restore default rules?</h2>
+              <p id="reset-rules-description" className="mt-2 text-xs leading-relaxed text-[#57606a] dark:text-[#8b949e]">
+                This replaces your current tracked rules with the default list. Your editor text and templates will remain unchanged.
+              </p>
+              <div className="mt-5 flex flex-col-reverse sm:flex-row justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsResetRulesDialogOpen(false)}
+                  className="min-h-11 px-4 border border-[#d0d7de] dark:border-[#30363d] rounded-md text-xs font-bold text-[#57606a] dark:text-[#c9d1d9] hover:bg-[#f6f8fa] dark:hover:bg-[#0d1117] focus-visible:outline-2 focus-visible:outline-[#58a6ff]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmResetWords}
+                  className="min-h-11 px-4 rounded-md bg-[#f85149] text-white text-xs font-bold hover:bg-[#f85149]/90 focus-visible:outline-2 focus-visible:outline-[#58a6ff]"
+                >
+                  Restore defaults
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* ==========================================
           DYNAMIC TEMPLATE CREATOR / EDITOR DIALOG
           ========================================== */}
       <AnimatePresence>
         {isTemplateModalOpen && (
-          <div className="fixed inset-0 z-55 flex items-center justify-center p-3 sm:p-4">
+          <div className="fixed inset-0 z-55 flex items-start sm:items-center justify-center overflow-y-auto p-3 sm:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.6 }}
@@ -1496,14 +1681,19 @@ export default function App() {
               className="absolute inset-0 bg-[#000000]"
             />
             <motion.div
+              ref={templateDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="template-dialog-title"
+              tabIndex={-1}
               initial={{ scale: 0.97, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.97, opacity: 0 }}
-              className="bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-4 sm:p-6 max-w-md w-[92vw] sm:w-full relative z-10 font-mono text-xs text-[#24292f] dark:text-[#c9d1d9] max-h-[90vh] overflow-y-auto"
+              className="bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-4 sm:p-6 max-w-md w-[92vw] sm:w-full relative z-10 font-mono text-xs text-[#24292f] dark:text-[#c9d1d9] max-h-[calc(100dvh-1.5rem)] overflow-y-auto"
             >
               {/* Header */}
               <div className="flex items-center justify-between mb-4 pb-2 border-b border-[#d0d7de] dark:border-[#30363d]">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#24292f] dark:text-white">
+                <h3 id="template-dialog-title" className="text-xs font-bold uppercase tracking-wider text-[#24292f] dark:text-white">
                   {templateModalMode === 'edit' && "Edit Template"}
                   {templateModalMode === 'create' && "Create Template"}
                   {templateModalMode === 'save_current' && "Save Current Editor Content"}
@@ -1548,7 +1738,7 @@ export default function App() {
               )}
 
               {/* Main Submit Form */}
-              <form onSubmit={handleTemplateModalSubmit} className="space-y-4">
+              <form noValidate onSubmit={handleTemplateModalSubmit} className="space-y-4">
                 {templateModalMode === 'save_current' && saveCurrentSubMode === 'overwrite' ? (
                   /* Overwrite fields */
                   <div className="space-y-3">
@@ -1559,7 +1749,6 @@ export default function App() {
                       <select
                         value={overwriteTargetId}
                         onChange={(e) => setOverwriteTargetId(e.target.value)}
-                        required
                         className="w-full px-3 py-2 bg-[#fbfbfb] dark:bg-[#0a0e14] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] rounded-md text-xs outline-hidden focus:border-[#58a6ff] font-mono"
                       >
                         {FIXED_CATEGORIES.map(category => {
@@ -1600,7 +1789,6 @@ export default function App() {
                         onChange={(e) => setTemplateModalData(prev => ({ ...prev, name: e.target.value }))}
                         placeholder="e.g. Design Update, Bug Fix"
                         maxLength={80}
-                        required
                         className="w-full px-3 py-2 bg-[#fbfbfb] dark:bg-[#0a0e14] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] rounded-md text-xs outline-hidden focus:border-[#58a6ff] font-mono"
                       />
                     </div>
@@ -1612,7 +1800,6 @@ export default function App() {
                       <select
                         value={templateModalData.category}
                         onChange={(e) => setTemplateModalData(prev => ({ ...prev, category: e.target.value }))}
-                        required
                         className="w-full px-3 py-2 bg-[#fbfbfb] dark:bg-[#0a0e14] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] rounded-md text-xs outline-hidden focus:border-[#58a6ff] font-mono"
                       >
                         {FIXED_CATEGORIES.map(cat => (
@@ -1631,7 +1818,6 @@ export default function App() {
                         value={templateModalData.content}
                         onChange={(e) => setTemplateModalData(prev => ({ ...prev, content: e.target.value }))}
                         placeholder="Write your template text here. You can use placeholders..."
-                        required
                         rows={6}
                         className="w-full px-3 py-2 bg-[#fbfbfb] dark:bg-[#0a0e14] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] rounded-md text-xs outline-hidden focus:border-[#58a6ff] font-mono resize-none leading-relaxed"
                       />
@@ -1643,13 +1829,13 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setIsTemplateModalOpen(false)}
-                    className="px-4 py-2 border border-[#d0d7de] dark:border-[#30363d] text-[#57606a] dark:text-[#8b949e] hover:bg-[#f6f8fa] dark:hover:bg-[#0d1117] rounded-md text-xs font-bold cursor-pointer"
+                    className="min-h-11 px-4 py-2 border border-[#d0d7de] dark:border-[#30363d] text-[#57606a] dark:text-[#8b949e] hover:bg-[#f6f8fa] dark:hover:bg-[#0d1117] rounded-md text-xs font-bold cursor-pointer"
                   >
                     CANCEL
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 bg-[#58a6ff] hover:bg-[#58a6ff]/90 text-slate-950 rounded-md text-xs font-bold cursor-pointer transition-colors"
+                    className="min-h-11 px-4 py-2 bg-[#58a6ff] hover:bg-[#58a6ff]/90 text-slate-950 rounded-md text-xs font-bold cursor-pointer transition-colors"
                   >
                     {templateModalMode === 'edit' && "UPDATE TEMPLATE"}
                     {templateModalMode === 'create' && "CREATE TEMPLATE"}
@@ -1667,11 +1853,12 @@ export default function App() {
       {/* ==========================================
           TOAST NOTIFICATION ENGINE
           ========================================== */}
-      <div className="fixed bottom-3 right-3 left-3 sm:left-auto sm:right-4 z-50 flex flex-col gap-2 max-w-full sm:max-w-sm pointer-events-none">
+      <div aria-live="polite" aria-relevant="additions" className="fixed bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] right-3 left-3 sm:left-auto sm:right-4 z-50 flex flex-col gap-2 max-w-full sm:max-w-sm pointer-events-none">
         <AnimatePresence>
           {toasts.map(t => (
             <motion.div
               key={t.id}
+              role={t.type === "error" ? "alert" : "status"}
               layout
               initial={{ opacity: 0, y: 15, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1687,7 +1874,7 @@ export default function App() {
               <span className="font-bold">
                 {t.type === "success" ? "[OK]" : t.type === "error" ? "[ERR]" : "[INFO]"}
               </span>
-              <span>{t.text}</span>
+              <span className="min-w-0 break-words">{t.text}</span>
             </motion.div>
           ))}
         </AnimatePresence>
@@ -1698,9 +1885,14 @@ export default function App() {
           ========================================== */}
       <AnimatePresence>
         {isCommandPaletteOpen && (
-          <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 sm:pt-24 px-4">
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:px-4 sm:pt-24">
             {/* Backdrop */}
             <motion.div
+              ref={commandPaletteDialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-label="Command palette"
+              tabIndex={-1}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -1713,24 +1905,24 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.95, y: -10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className="relative w-full max-w-xl bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-xl shadow-2xl overflow-hidden z-10 font-mono text-xs"
+              className="relative w-full max-w-xl max-h-[calc(100dvh-1.5rem)] bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-xl shadow-2xl overflow-hidden z-10 font-mono text-xs flex flex-col"
             >
               {/* Search Bar */}
               <div className="flex items-center gap-2 px-4 py-3 border-b border-[#d0d7de] dark:border-[#30363d] bg-[#f6f8fa] dark:bg-[#0d1117]">
                 <Search className="w-4 h-4 text-[#58a6ff]" />
                 <input
+                  ref={commandPaletteInputRef}
                   type="text"
                   value={commandPaletteQuery}
                   onChange={(e) => setCommandPaletteQuery(e.target.value)}
                   placeholder="Type a command or search actions..."
                   className="w-full bg-transparent outline-hidden text-[#24292f] dark:text-white placeholder:text-[#57606a] dark:placeholder:text-[#8b949e] font-mono text-xs"
-                  autoFocus
                 />
                 <kbd className="px-1.5 py-0.5 bg-[#ffffff] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded text-[9px] text-[#57606a] dark:text-[#8b949e]">ESC</kbd>
               </div>
 
               {/* Command List */}
-              <div className="p-2 max-h-80 overflow-y-auto space-y-1">
+              <div className="min-h-0 p-2 max-h-[min(20rem,calc(100dvh-8rem))] overflow-y-auto space-y-1">
                 {[
                   {
                     id: "obfuscate",
@@ -1758,11 +1950,11 @@ export default function App() {
                   },
                   {
                     id: "templates",
-                    title: "Toggle Templates Explorer",
+                    title: "Open Message Template",
                     icon: FileText,
                     color: "text-[#58a6ff]",
                     shortcut: "Drawer",
-                    action: () => { setIsTemplatesDrawerOpen(!isTemplatesDrawerOpen); setIsCommandPaletteOpen(false); }
+                    action: () => { openMessageTemplate(); setIsCommandPaletteOpen(false); }
                   },
                   {
                     id: "substring",
@@ -1820,7 +2012,7 @@ export default function App() {
       {/* ==========================================
           STICKY MOBILE TOOLBAR (Phone Responsiveness)
           ========================================== */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#f6f8fa]/95 dark:bg-[#161b22]/95 backdrop-blur-md border-t border-[#d0d7de] dark:border-[#30363d] p-2 flex items-center justify-around shadow-lg font-mono">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#f6f8fa]/95 dark:bg-[#161b22]/95 backdrop-blur-md border-t border-[#d0d7de] dark:border-[#30363d] px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] flex items-center justify-around shadow-lg font-mono">
         <button
           onClick={handleClearEditor}
           className="flex min-w-11 min-h-11 flex-col items-center justify-center gap-1 text-[10px] text-[#f85149] p-1.5 cursor-pointer"
@@ -1856,13 +2048,6 @@ export default function App() {
           <span>Copy</span>
         </button>
 
-        <button
-          onClick={() => setIsTemplatesDrawerOpen(!isTemplatesDrawerOpen)}
-          className="flex min-w-11 min-h-11 flex-col items-center justify-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
-        >
-          <FileText className="w-4 h-4" />
-          <span>Templates</span>
-        </button>
       </div>
 
     </div>
@@ -1884,11 +2069,15 @@ interface UnifiedSidebarProps {
   handleAddWord: (e: React.FormEvent) => void;
   handleRemoveWord: (word: string) => void;
   handleResetWords: () => void;
+  resetRulesTriggerRef: React.RefObject<HTMLButtonElement | null>;
+  isTemplatesDrawerOpen: boolean;
+  onToggleTemplates: () => void;
+  showTemplateToggle: boolean;
   graspSubstrings: boolean;
   setGraspSubstrings: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-function UnifiedSidebar({ restrictedWords, filteredWords, newWordInput, setNewWordInput, wordFilter, setWordFilter, handleAddWord, handleRemoveWord, handleResetWords, graspSubstrings, setGraspSubstrings }: UnifiedSidebarProps) {
+function UnifiedSidebar({ restrictedWords, filteredWords, newWordInput, setNewWordInput, wordFilter, setWordFilter, handleAddWord, handleRemoveWord, handleResetWords, resetRulesTriggerRef, isTemplatesDrawerOpen, onToggleTemplates, showTemplateToggle, graspSubstrings, setGraspSubstrings }: UnifiedSidebarProps) {
   return (
     <div className="bg-[#f6f8fa] dark:bg-[#161b22] rounded-md border border-[#d0d7de] dark:border-[#30363d] p-4 flex flex-col gap-4 h-full">
         <div className="flex flex-col gap-4 h-full">
@@ -1902,6 +2091,20 @@ function UnifiedSidebar({ restrictedWords, filteredWords, newWordInput, setNewWo
               <span className="font-mono font-semibold text-[#24292f] dark:text-white">{restrictedWords.length}</span> tokens.
             </p>
           </div>
+
+          {showTemplateToggle && <button
+            type="button"
+            onClick={onToggleTemplates}
+            aria-expanded={isTemplatesDrawerOpen}
+            className={`w-full min-w-0 min-h-11 px-3 py-2 rounded-md border flex items-center gap-2 text-left text-xs font-mono font-bold transition-colors ${
+              isTemplatesDrawerOpen
+                ? "bg-[#58a6ff]/10 text-[#58a6ff] border-[#58a6ff]/30"
+                : "bg-[#ffffff] dark:bg-[#0d1117] text-[#57606a] dark:text-[#c9d1d9] border-[#d0d7de] dark:border-[#30363d] hover:text-[#58a6ff] hover:border-[#58a6ff]/40"
+            }`}
+          >
+            <FileText className="w-4 h-4 shrink-0 text-[#58a6ff]" />
+            <span className="min-w-0 truncate">Message Template</span>
+          </button>}
 
           {/* NEW FEATURE TOGGLE: SUBSTRING GRASPING */}
           <div className="p-3 bg-[#ffffff] dark:bg-[#0d1117] border border-[#d0d7de] dark:border-[#30363d] rounded-md flex flex-col gap-1.5">
@@ -1971,7 +2174,7 @@ function UnifiedSidebar({ restrictedWords, filteredWords, newWordInput, setNewWo
           </div>
 
           {/* LIST OF TRACKED ITEMS CHIPS */}
-          <div className="flex-1 overflow-y-auto max-h-[350px] md:max-h-[450px] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-2 bg-[#ffffff] dark:bg-[#0a0e14]">
+          <div className="flex-1 overflow-y-auto max-h-[350px] md:max-h-[450px] xl:max-h-[clamp(120px,calc(100dvh-620px),450px)] border border-[#d0d7de] dark:border-[#30363d] rounded-md p-2 bg-[#ffffff] dark:bg-[#0a0e14]">
             <div className="flex flex-col gap-1 text-xs font-mono">
               {filteredWords.map((word, idx) => (
                 <div
@@ -2001,10 +2204,11 @@ function UnifiedSidebar({ restrictedWords, filteredWords, newWordInput, setNewWo
           {/* RE-INITIALIZE ACTIONS */}
           <div className="space-y-3 pt-3 border-t border-[#d0d7de] dark:border-[#30363d] font-mono shrink-0">
             <button
+              ref={resetRulesTriggerRef}
               id="restore-defaults-button"
               onClick={handleResetWords}
               type="button"
-              className="w-full py-2 bg-[#29C27A] border-[#29C27A] dark:bg-[#29C27A] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] text-white hover:text-[#f85149] border border-[#d0d7de] dark:border-[#29C27A] text-[#24292f] dark:text-[#c9d1d9] text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full min-h-11 py-2 bg-[#29C27A] border-[#29C27A] dark:bg-[#29C27A] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] text-white hover:text-[#f85149] border border-[#d0d7de] dark:border-[#29C27A] text-[#24292f] dark:text-[#c9d1d9] text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset Rules list</span>

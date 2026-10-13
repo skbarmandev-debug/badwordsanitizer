@@ -16,6 +16,11 @@ html, body {
   width: 100%;
 }
 
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
 /* Utility to hide scrollbars while keeping scroll functionality */
 .scrollbar-none {
   -ms-overflow-style: none;  /* IE and Edge */
