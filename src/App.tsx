@@ -977,12 +977,12 @@ export default function App() {
       {/* ==========================================
           MAIN WORKSPACE GRID
           ========================================== */}
-      <main className="flex-1 max-w-[1600px] w-full mx-auto p-3 pb-20 sm:px-6 sm:py-4 grid grid-cols-1 xl:grid-cols-[24rem_minmax(0,1fr)] gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-4">
+      <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 pt-2 pb-16 sm:px-6 sm:py-3 grid grid-cols-1 xl:grid-cols-[24rem_minmax(0,1fr)] gap-x-4 sm:gap-x-6 gap-y-3 sm:gap-y-3">
         
         {/* ==========================================
             DESKTOP RIGHT WORKSPACE - THE CODE AREA & ACTIONS
             ========================================== */}
-        <section className="xl:order-2 flex flex-col gap-4 min-w-0">
+        <section className="xl:order-2 flex flex-col gap-3 min-w-0">
 
           {/* IDE EDITOR COMPONENT */}
           <div className="bg-[#f6f8fa] dark:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] rounded-md shadow-sm flex flex-col flex-1 overflow-hidden min-w-0">
@@ -1007,7 +1007,7 @@ export default function App() {
             </div>
 
             {/* Diagnostic Terminal Output Summary (Live indicator header) */}
-            <div className="px-3 py-2 sm:px-4 sm:py-2.5 bg-[#f6f8fa]/50 dark:bg-[#161b22]/50 border-b border-[#d0d7de] dark:border-[#30363d] flex flex-wrap items-center justify-between gap-2">
+            <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#f6f8fa]/50 dark:bg-[#161b22]/50 border-b border-[#d0d7de] dark:border-[#30363d] flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2 text-[11px] sm:text-xs font-mono min-w-0">
                 {matchedRanges.length > 0 ? (
                   <span className="text-[#f0883e] font-medium flex items-center gap-1.5 break-words">
@@ -1044,9 +1044,9 @@ export default function App() {
             </div>
 
             {/* EDITOR WORKSPACE (High-Performance Overlay Textarea) */}
-            <div className="flex flex-1 bg-[#fbfbfb] dark:bg-[#0a0e14] min-h-[280px] sm:min-h-[350px] md:min-h-[clamp(260px,calc(100dvh-500px),680px)] overflow-hidden relative">
+            <div className="flex flex-1 bg-[#fbfbfb] dark:bg-[#0a0e14] min-h-[clamp(190px,calc(100dvh-410px),280px)] sm:min-h-[clamp(260px,calc(100dvh-475px),680px)] overflow-hidden relative">
               {/* EDITOR CONTAINER WITH SYNCHRONIZED BACKDROP + TEXTAREA */}
-              <div className="flex-1 relative min-h-[280px] sm:min-h-[350px] md:min-h-[clamp(260px,calc(100dvh-500px),680px)] overflow-hidden bg-[#fbfbfb] dark:bg-[#0a0e14]">
+              <div className="flex-1 relative min-h-0 overflow-hidden bg-[#fbfbfb] dark:bg-[#0a0e14]">
                 {/* HIGHLIGHT BACKDROP LAYER */}
                 <div
                   ref={backdropRef}
@@ -1168,7 +1168,7 @@ export default function App() {
               </div>
 
               {isConsoleOpen && (
-                <div className="p-2 sm:p-3 max-h-[min(8rem,12dvh)] overflow-y-auto space-y-1.5 text-[11px] leading-relaxed bg-[#0a0e14] text-[#c9d1d9] border-b border-[#30363d]">
+                <div className="p-2 sm:p-3 max-h-[min(6rem,10dvh)] overflow-y-auto space-y-1.5 text-[11px] leading-relaxed bg-[#0a0e14] text-[#c9d1d9] border-b border-[#30363d]">
                   <div className="flex flex-wrap items-center gap-3 sm:gap-5 pb-1.5 mb-1.5 border-b border-[#30363d]/60 text-[10px] font-mono">
                     <div className="flex items-center gap-1 text-[#58a6ff] font-bold">
                       <Zap className="w-3 h-3 text-[#58a6ff]" />
@@ -1227,7 +1227,7 @@ export default function App() {
             </div>
 
             {/* EDITOR TERMINAL STATUS BAR */}
-            <div className="p-3 sm:p-4 bg-[#f6f8fa] dark:bg-[#161b22]/70 border-t border-[#d0d7de] dark:border-[#30363d] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0">
+            <div className="p-2 sm:p-3 bg-[#f6f8fa] dark:bg-[#161b22]/70 border-t border-[#d0d7de] dark:border-[#30363d] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 shrink-0">
               {/* Lines / Characters Counter / Speed & Memory Tracker */}
               <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2.5 sm:gap-4 text-[11px] sm:text-xs font-mono text-[#57606a] dark:text-[#8b949e]">
                 <div>
