@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { analyzeClientText, typingTracker, GrammarIssue } from "./lib/clientNlpEngine";
+import { createRestrictedMatcher, MatchRange } from "./lib/restrictedMatcher";
 
 // ==========================================
 // DEFAULT RESTRICTED WORD LIST (FIVERR RED-FLAGS)
@@ -122,82 +123,22 @@ const DEFAULT_TEMPLATES: Template[] = [
     name: "Default",
     category: "Delivery Approach Without Modification",
     content: "Hi there,\n\nI hope you are doing great.\n\nSince I've completed all the assigned tasks from my end, can I deliver the work to you?\n\nNo worries about the transition; you will receive 30 days of ongoing support from me starting today. If you notice any minor tweaks needed or have questions about the new page, just message me here in the Fiverr Inbox, and I will take care of it immediately.\n\nThank you for the continued trust in my work. I look forward to your thoughts!\n\nBest regards,"
+  },
+  {
+    id: "default-first-draft-delivery-extension",
+    name: "First Draft Update + Delivery Extension Request",
+    category: "Delivery Extension Request",
+    content: "I've shared the first draft. Please review it and share your feedback for any necessary changes.\n\nSince the order deadline is now approaching, I’ve submitted a delivery time extension request.\n\nThe additional time will allow us to properly check for any necessary updates without rushing the work.\n\nPlease accept the extension request. I truly appreciate your patience and cooperation."
   }
 ];
 
 // ==========================================
 // HELPER TYPES & FUNCTIONS
 // ==========================================
-interface MatchRange {
-  start: number;
-  end: number;
-  word: string;
-}
-
 interface ToastMessage {
   id: string;
   type: "success" | "error" | "info";
   text: string;
-}
-
-// Escapes regex characters
-function escapeRegExp(string: string) {
-  return string.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
-}
-
-// Case-insensitively scan text for restricted phrases/words
-// Matches are non-overlapping, prioritizing longer terms (e.g. "message me outside" before "message")
-// If graspSubstrings is enabled, detects substrings inside words (e.g. "mywhatsapp" matches "whatsapp")
-function findMatches(text: string, wordList: string[], graspSubstrings: boolean = true): MatchRange[] {
-  if (!text) return [];
-  const matches: MatchRange[] = [];
-  const occupied = new Array(text.length).fill(false);
-
-  // Sort word list by length descending to process longest phrases first
-  const sortedWords = [...wordList]
-    .map(w => w.trim())
-    .filter(w => w.length > 0)
-    .sort((a, b) => b.length - a.length);
-
-  for (const word of sortedWords) {
-    const escaped = escapeRegExp(word);
-    const regex = graspSubstrings
-      ? new RegExp(escaped, 'gi')
-      : new RegExp(`(?<=^|[^a-zA-Z0-9])${escaped}(?=$|[^a-zA-Z0-9])`, 'gi');
-    
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-      if (match[0].length === 0) {
-        regex.lastIndex++;
-        continue;
-      }
-      const start = match.index;
-      const end = start + match[0].length;
-      
-      // Ensure no overlap with previously matched longer phrases
-      let hasOverlap = false;
-      for (let i = start; i < end; i++) {
-        if (occupied[i]) {
-          hasOverlap = true;
-          break;
-        }
-      }
-      
-      if (!hasOverlap) {
-        for (let i = start; i < end; i++) {
-          occupied[i] = true;
-        }
-        matches.push({
-          start,
-          end,
-          word: match[0]
-        });
-      }
-    }
-  }
-
-  // Sort by start index ascending for chronological text parsing
-  return matches.sort((a, b) => a.start - b.start);
 }
 
 // Insert "-" between every single letter of each word in a string, preserving spaces
@@ -425,9 +366,11 @@ export default function App() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Compute matches & highlighted text with zero-latency memoization
-  const matchedRanges = useMemo(() => {
-    return findMatches(text, restrictedWords, graspSubstrings);
-  }, [text, restrictedWords, graspSubstrings]);
+  const matcher = useMemo(
+    () => createRestrictedMatcher(restrictedWords, graspSubstrings),
+    [restrictedWords, graspSubstrings]
+  );
+  const matchedRanges = useMemo(() => matcher(text), [matcher, text]);
 
   const highlightedContent = useMemo(() => {
     if (!text) return null;
@@ -719,7 +662,8 @@ export default function App() {
     "Delivery approach",
     "Delivery Approach Without Modification",
     "Inbox Message",
-    "Inbox Message Without Modification"
+    "Inbox Message Without Modification",
+    "Fiverr Client Communication"
   ];
 
   const handleSelectTemplateTrigger = (t: Template) => {
@@ -1981,7 +1925,7 @@ export default function App() {
                         value={templateModalData.name}
                         onChange={(e) => setTemplateModalData(prev => ({ ...prev, name: e.target.value }))}
                         placeholder="e.g. Design Update, Bug Fix"
-                        maxLength={40}
+                        maxLength={80}
                         required
                         className="w-full px-3 py-2 bg-[#fbfbfb] dark:bg-[#0a0e14] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] rounded-md text-xs outline-hidden focus:border-[#58a6ff] font-mono"
                       />
@@ -2234,7 +2178,7 @@ export default function App() {
         </button>
 
         <button
-          onClick={checkGrammarWithAI}
+          onClick={() => checkGrammarWithAI()}
           className="flex flex-col items-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
         >
           <Sparkles className="w-4 h-4" />
@@ -2532,7 +2476,7 @@ function UnifiedSidebar({
                 </div>
               </div>
               <button
-                onClick={checkGrammarWithAI}
+                onClick={() => checkGrammarWithAI()}
                 type="button"
                 className="w-full mt-1 bg-[#f85149]/20 hover:bg-[#f85149]/30 border border-[#f85149]/40 py-1 rounded-md text-[10px] uppercase font-bold transition-all text-[#f85149] cursor-pointer"
               >
