@@ -2023,7 +2023,7 @@ function UnifiedSidebar({ restrictedWords, filteredWords, newWordInput, setNewWo
               id="restore-defaults-button"
               onClick={handleResetWords}
               type="button"
-              className="w-full py-2 bg-[#29C27A] dark:bg-[#0d1117] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] border border-[#d0d7de] dark:border-[#30363d] text-[#24292f] dark:text-[#c9d1d9] text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full py-2 bg-[#29C27A] border-[#29C27A] dark:bg-[#29C27A] hover:bg-[#f6f8fa] dark:hover:bg-[#161b22] text-white hover:text-[#f85149] border border-[#d0d7de] dark:border-[#29C27A] text-[#24292f] dark:text-[#c9d1d9] text-xs font-bold rounded-md transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset Rules list</span>
