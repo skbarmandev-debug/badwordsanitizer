@@ -1151,7 +1151,7 @@ export default function App() {
                     className="px-3 py-1.5 sm:px-4 sm:py-2 bg-gradient-to-r from-[#f0883e] to-[#f0883e]/90 hover:from-[#f0883e]/90 hover:to-[#f0883e]/80 text-white text-[11px] sm:text-xs font-bold font-mono rounded-md transition-colors border border-transparent flex items-center gap-1.5 cursor-pointer h-8"
                   >
                     <Shield className="w-3.5 h-3.5" />
-                    <span>Obfuscate</span>
+                    <span>Fix</span>
                   </button>
                 )}
 
