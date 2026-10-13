@@ -37,27 +37,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { typingTracker } from "./lib/typingSpeedTracker";
 import { createRestrictedMatcher, MatchRange } from "./lib/restrictedMatcher";
 import { obfuscateText } from "./lib/obfuscateText";
-import { DEFAULT_TEMPLATES } from "@/Template/Template";
+import { DEFAULT_RESTRICTED_WORDS, DEFAULT_TEMPLATES } from "@/Template/Template";
 
-// ==========================================
-// DEFAULT RESTRICTED WORD LIST (FIVERR RED-FLAGS)
-// ==========================================
-const DEFAULT_RESTRICTED_WORDS = [
-  "email", "gmail", "yahoo", "skype", "whatsapp", "telegram", "viber", "wechat", "discord",
-  "facebook", "instagram", "linkedin", "twitter", "phone number", "mobile number", "contact number",
-  "zoom", "google meet", "call me", "text me", "message me outside",
-  "pay", "payment", "paypal", "payoneer", "wise", "stripe", "cashapp",
-  "bank", "bank account", "bank transfer", "western union",
-  "crypto", "bitcoin", "usdt", "binance", "direct pay", "pay outside", "invoice",
-  "5 star", "five star", "review", "good review", "positive review",
-  "rating", "rate my work", "leave a review",
-  "homework", "assignment", "thesis", "dissertation", "exam", "quiz",
-  "university", "college", "school project", "student",
-  "hack", "hacking", "cracking", "password cracking",
-  "spam", "bot", "malware", "virus", "fake", "fake followers", "fake reviews", "fake likes",
-  "phishing", "deepfake", "scam",
-  "contact", "cancel the order", "scammer", "cancellation", "tip me", "report you", "buy", "account", "sell account", "exchange"
-];
 
 
 interface Template {
