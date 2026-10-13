@@ -36,6 +36,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { typingTracker } from "./lib/typingSpeedTracker";
 import { createRestrictedMatcher, MatchRange } from "./lib/restrictedMatcher";
+import { obfuscateText } from "./lib/obfuscateText";
 
 // ==========================================
 // DEFAULT RESTRICTED WORD LIST (FIVERR RED-FLAGS)
@@ -146,28 +147,6 @@ interface ToastMessage {
   id: string;
   type: "success" | "error" | "info";
   text: string;
-}
-
-// Insert "-" between every single letter of each word in a string, preserving spaces
-function obfuscateWordOrPhrase(wordOrPhrase: string): string {
-  return wordOrPhrase
-    .split(/\s+/)
-    .map(word => word.split("").join("-"))
-    .join(" ");
-}
-
-// Replaces all restricted words from right to left
-function obfuscateText(text: string, matches: MatchRange[]): string {
-  const sortedMatches = [...matches].sort((a, b) => b.start - a.start);
-  let newText = text;
-  
-  for (const match of sortedMatches) {
-    const originalValue = text.slice(match.start, match.end);
-    const obfuscatedValue = obfuscateWordOrPhrase(originalValue);
-    newText = newText.slice(0, match.start) + obfuscatedValue + newText.slice(match.end);
-  }
-  
-  return newText;
 }
 
 // ==========================================
@@ -598,6 +577,31 @@ export default function App() {
   // ==========================================
   // BUTTON ACTIONS
   // ==========================================
+  const handleClearEditor = () => {
+    if (historyTimeoutRef.current) {
+      clearTimeout(historyTimeoutRef.current);
+      historyTimeoutRef.current = null;
+    }
+
+    setText("");
+    setObfuscatedFeedback(null);
+    typingTracker.reset();
+    setLiveWpm(0);
+    if (textareaRef.current) {
+      textareaRef.current.scrollTop = 0;
+      textareaRef.current.scrollLeft = 0;
+      textareaRef.current.setSelectionRange(0, 0);
+    }
+    if (backdropRef.current) {
+      backdropRef.current.scrollTop = 0;
+      backdropRef.current.scrollLeft = 0;
+    }
+
+    addToast("Editor buffer cleared.", "info");
+    addLog("Editor buffer wiped by user.", "warn");
+    setIsCommandPaletteOpen(false);
+  };
+
   const triggerManualDetect = () => {
     if (matchedRanges.length > 0) {
       addToast(`Detected ${matchedRanges.length} restricted word(s)`, "info");
@@ -1204,6 +1208,15 @@ export default function App() {
 
               {/* Monospace Action Buttons */}
               <div className="flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-2.5 w-full sm:w-auto">
+                <button
+                  onClick={handleClearEditor}
+                  className="px-3 py-1.5 sm:px-4 sm:py-2 bg-[#ffffff] dark:bg-[#0d1117] hover:bg-[#f85149]/10 border border-[#d0d7de] dark:border-[#30363d] text-[#f85149] text-[11px] sm:text-xs font-medium font-mono rounded-md transition-colors flex items-center gap-1.5 cursor-pointer h-8"
+                  title="Clear the editor buffer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear</span>
+                </button>
+
                 <button
                   id="detect-words-button"
                   onClick={triggerManualDetect}
@@ -1857,11 +1870,7 @@ export default function App() {
                     color: "text-[#f85149]",
                     shortcut: "Reset",
                     action: () => {
-                      setText("");
-                      updateEditorContentDirectly("");
-                      addToast("Editor buffer cleared.", "info");
-                      addLog("Editor buffer wiped by user.", "warn");
-                      setIsCommandPaletteOpen(false);
+                      handleClearEditor();
                     }
                   }
                 ]
@@ -1891,6 +1900,15 @@ export default function App() {
           STICKY MOBILE TOOLBAR (Phone Responsiveness)
           ========================================== */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#f6f8fa]/95 dark:bg-[#161b22]/95 backdrop-blur-md border-t border-[#d0d7de] dark:border-[#30363d] p-2 flex items-center justify-around shadow-lg font-mono">
+        <button
+          onClick={handleClearEditor}
+          className="flex flex-col items-center gap-1 text-[10px] text-[#f85149] p-1.5 cursor-pointer"
+          title="Clear the editor buffer"
+        >
+          <Trash2 className="w-4 h-4" />
+          <span>Clear</span>
+        </button>
+
         <button
           onClick={triggerManualDetect}
           className="flex flex-col items-center gap-1 text-[10px] text-[#58a6ff] p-1.5 cursor-pointer"
